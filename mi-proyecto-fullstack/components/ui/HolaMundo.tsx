@@ -121,6 +121,22 @@ export default function HolaMundo({ data }: HolaMundoProps): React.JSX.Element {
         {data.description}
       </motion.p>
 
+      {/* Datos personales */}
+      <motion.div
+        custom={1.3}
+        variants={fadeUpVariants}
+        initial="hidden"
+        animate="visible"
+        className="mt-6 space-y-2"
+      >
+        <p className="text-sm md:text-base font-medium text-white/90">
+          Maria Paula Lascarro
+        </p>
+        <p className="text-xs md:text-sm text-slate-400 tracking-wide">
+          Documento: 1082919708
+        </p>
+      </motion.div>
+
       {/* Separador */}
       <motion.div
         className="mx-auto my-8 h-px w-20 bg-gradient-to-r from-transparent via-purple-600 to-transparent"
