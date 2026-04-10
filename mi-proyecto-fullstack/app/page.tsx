@@ -21,7 +21,7 @@ export const metadata: Metadata = {
 export default function HomePage(): React.JSX.Element {
   return (
     <PageWrapper>
-      <main className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden bg-[#020617]">
+      <main className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden bg-gradient-to-br from-purple-900 via-slate-900 to-black">
         <HolaMundo data={homeData.hero} />
       </main>
     </PageWrapper>

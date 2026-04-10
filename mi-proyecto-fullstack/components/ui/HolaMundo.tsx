@@ -56,14 +56,14 @@ export default function HolaMundo({ data }: HolaMundoProps): React.JSX.Element {
     <div className="relative text-center px-6 select-none">
 
       {/* Halos de fondo */}
-      <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[600px] h-[600px] pointer-events-none">
-        <div className="absolute inset-0 rounded-full bg-indigo-600/10 blur-3xl animate-pulse-slow" />
-        <div className="absolute inset-16 rounded-full bg-violet-600/10 blur-2xl animate-float" />
+      <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[800px] h-[800px] pointer-events-none">
+        <div className="absolute inset-0 rounded-full bg-purple-600/15 blur-3xl animate-pulse-slow" />
+        <div className="absolute inset-16 rounded-full bg-violet-600/20 blur-2xl animate-float" />
       </div>
 
       {/* Línea decorativa superior */}
       <motion.div
-        className="mx-auto mb-8 h-px w-24 bg-gradient-to-r from-transparent via-indigo-500 to-transparent"
+        className="mx-auto mb-8 h-px w-32 bg-gradient-to-r from-transparent via-purple-500 to-transparent"
         initial={{ scaleX: 0, opacity: 0 }}
         animate={{ scaleX: 1, opacity: 1 }}
         transition={{ delay: 0.1, duration: 0.8 }}
@@ -83,9 +83,9 @@ export default function HolaMundo({ data }: HolaMundoProps): React.JSX.Element {
                 <motion.span
                   key={letterIndex}
                   variants={letterVariants}
-                  className="inline-block text-7xl md:text-[9rem] lg:text-[11rem] font-bold leading-none tracking-tight"
+                  className="inline-block text-8xl md:text-[12rem] lg:text-[15rem] font-bold leading-none tracking-tight"
                   style={{
-                    background: 'linear-gradient(180deg, #ffffff 0%, #818cf8 60%, #6366f1 100%)',
+                    background: 'linear-gradient(180deg, #ffffff 0%, #a855f7 60%, #7c3aed 100%)',
                     WebkitBackgroundClip: 'text',
                     WebkitTextFillColor: 'transparent',
                     backgroundClip: 'text',
@@ -105,7 +105,7 @@ export default function HolaMundo({ data }: HolaMundoProps): React.JSX.Element {
         variants={fadeUpVariants}
         initial="hidden"
         animate="visible"
-        className="mt-8 text-sm md:text-base tracking-[0.3em] uppercase font-mono text-indigo-400"
+        className="mt-8 text-sm md:text-base tracking-[0.3em] uppercase font-mono text-purple-400"
       >
         {data.subtitle}
       </motion.p>
@@ -123,7 +123,7 @@ export default function HolaMundo({ data }: HolaMundoProps): React.JSX.Element {
 
       {/* Separador */}
       <motion.div
-        className="mx-auto my-8 h-px w-16 bg-gradient-to-r from-transparent via-slate-600 to-transparent"
+        className="mx-auto my-8 h-px w-20 bg-gradient-to-r from-transparent via-purple-600 to-transparent"
         initial={{ scaleX: 0, opacity: 0 }}
         animate={{ scaleX: 1, opacity: 1 }}
         transition={{ delay: 1.2, duration: 0.6 }}
@@ -134,7 +134,7 @@ export default function HolaMundo({ data }: HolaMundoProps): React.JSX.Element {
         initial={{ opacity: 0, y: 10, scale: 0.9 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ delay: 1.4, duration: 0.5, type: 'spring', stiffness: 300 }}
-        className="inline-flex items-center gap-3 px-5 py-2.5 rounded-full border border-indigo-500/20 bg-indigo-950/50 backdrop-blur-sm"
+        className="inline-flex items-center gap-3 px-5 py-2.5 rounded-full border border-purple-500/20 bg-purple-950/50 backdrop-blur-sm"
       >
         <span className="relative flex h-2 w-2">
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
@@ -145,13 +145,23 @@ export default function HolaMundo({ data }: HolaMundoProps): React.JSX.Element {
         </span>
       </motion.div>
 
+      {/* Botón moderno */}
+      <motion.button
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 1.6, duration: 0.6 }}
+        className="mt-8 px-8 py-3 bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+      >
+        Explorar Más
+      </motion.button>
+
       {/* Grid decorativo de fondo */}
       <div
-        className="absolute inset-0 -z-10 opacity-[0.03] pointer-events-none"
+        className="absolute inset-0 -z-10 opacity-[0.05] pointer-events-none"
         style={{
           backgroundImage: `
-            linear-gradient(rgba(99,102,241,1) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(99,102,241,1) 1px, transparent 1px)
+            linear-gradient(rgba(147,51,234,1) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(147,51,234,1) 1px, transparent 1px)
           `,
           backgroundSize: '60px 60px',
         }}
