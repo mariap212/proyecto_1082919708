@@ -1,0 +1,12 @@
+{
+  "hero": {
+    "greeting": "Hola Mundo",
+    "subtitle": "TypeScript · Next.js · Vercel",
+    "description": "Sistema fullstack con tipado estricto y datos JSON funcionando correctamente.",
+    "badge": "TypeScript · OK"
+  },
+  "meta": {
+    "title": "Home | Mi App Fullstack",
+    "description": "Página principal del sistema fullstack TypeScript"
+  }
+}

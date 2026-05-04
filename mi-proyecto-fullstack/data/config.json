@@ -1,0 +1,13 @@
+{
+  "app": {
+    "name": "Mi App Fullstack",
+    "version": "1.0.0",
+    "language": "es",
+    "author": "Tu Nombre"
+  },
+  "theme": {
+    "primaryColor": "#0f172a",
+    "accentColor": "#6366f1",
+    "mode": "dark"
+  }
+}
