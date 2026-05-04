@@ -1,29 +1,20 @@
 import type { Metadata } from 'next';
 import React from 'react';
-import { readJsonFileValidated } from '@/lib/data/reader';
-import { HomePageDataSchema } from '@/lib/data/schemas';
-import HolaMundo from '@/components/ui/HolaMundo';
-import PageWrapper from '@/components/layout/PageWrapper';
-
-const homeResult = readJsonFileValidated('pages/home.json', HomePageDataSchema);
-
-if (!homeResult.success) {
-  throw new Error(`Error cargando datos del home: ${homeResult.error}`);
-}
-
-const homeData = homeResult.data;
+import { getAuthSession } from '@/lib/auth';
+import { redirect } from 'next/navigation';
 
 export const metadata: Metadata = {
-  title: homeData.meta.title,
-  description: homeData.meta.description,
+  title: 'OvoGest | Gestión de distribución mayorista',
+  description: 'Sistema de gestión para distribuidoras mayoristas de huevos',
 };
 
-export default function HomePage(): React.JSX.Element {
-  return (
-    <PageWrapper>
-      <main className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden bg-[#020617]">
-        <HolaMundo data={homeData.hero} />
-      </main>
-    </PageWrapper>
-  );
+export default async function HomePage(): Promise<React.JSX.Element> {
+  const session = await getAuthSession();
+
+  // Redirigir según estado de autenticación
+  if (session) {
+    redirect('/dashboard');
+  } else {
+    redirect('/login');
+  }
 }
