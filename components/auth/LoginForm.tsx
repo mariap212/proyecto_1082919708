@@ -45,7 +45,7 @@ export default function LoginForm({ onSuccess }: LoginFormProps): React.JSX.Elem
       if (onSuccess) {
         onSuccess();
       }
-    } catch (err) {
+    } catch {
       setError('Error de conexión. Intenta de nuevo.');
       setLoading(false);
     }

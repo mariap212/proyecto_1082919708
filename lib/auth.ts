@@ -22,7 +22,7 @@ export interface AuthSession {
  * Crea un token JWT con la información del usuario
  */
 export async function createJWT(session: AuthSession): Promise<string> {
-  return await new SignJWT(session as JWTPayload)
+  return await new SignJWT(session as unknown as JWTPayload)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime('24h')
@@ -36,7 +36,7 @@ export async function verifyJWT(token: string): Promise<AuthSession | null> {
   try {
     const verified = await jwtVerify(token, JWT_SECRET);
     return verified.payload as unknown as AuthSession;
-  } catch (err) {
+  } catch {
     return null;
   }
 }

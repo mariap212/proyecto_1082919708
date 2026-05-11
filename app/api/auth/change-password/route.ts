@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthSession } from '@/lib/auth';
 
-export async function POST(request: NextRequest) {
+export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     const session = await getAuthSession();
 
@@ -43,8 +43,7 @@ export async function POST(request: NextRequest) {
       { success: true, message: 'Contraseña actualizada' },
       { status: 200 }
     );
-  } catch (err) {
-    console.error('Change password error:', err);
+  } catch {
     return NextResponse.json(
       { error: 'Error interno del servidor' },
       { status: 500 }

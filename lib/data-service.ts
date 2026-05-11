@@ -22,8 +22,7 @@ export async function readUsersFromSeed(): Promise<User[]> {
     const filePath = path.join(process.cwd(), 'data', 'users.json');
     const content = await fs.readFile(filePath, 'utf-8');
     return JSON.parse(content) as User[];
-  } catch (err) {
-    console.error('Error reading users from seed:', err);
+  } catch {
     return [];
   }
 }

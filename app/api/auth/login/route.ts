@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { setAuthCookie, verifyPassword } from '@/lib/auth';
 import { findUserByEmail } from '@/lib/data-service';
 
-export async function POST(request: NextRequest) {
+export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     const body = await request.json();
     const { email, password } = body;
@@ -60,8 +60,7 @@ export async function POST(request: NextRequest) {
       },
       { status: 200 }
     );
-  } catch (err) {
-    console.error('Login error:', err);
+  } catch {
     return NextResponse.json(
       { error: 'Error interno del servidor' },
       { status: 500 }
