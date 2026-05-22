@@ -6,6 +6,8 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
+    "setup": "npm run type-check && npm run lint",
+    "build:full": "npm run setup && next build",
     "lint": "eslint . --ext .ts,.tsx",
     "type-check": "tsc --noEmit",
     "format": "prettier --write .",
