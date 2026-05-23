@@ -1,3 +1,4 @@
+import bcrypt from 'bcryptjs';
 import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 import type { JWTPayload } from 'jose';
@@ -84,28 +85,15 @@ export async function clearAuthCookie(): Promise<void> {
  * En producción: import bcrypt from 'bcryptjs'
  */
 export async function hashPassword(password: string): Promise<string> {
-  // Placeholder: en producción usar bcryptjs
-  // const salt = await bcrypt.genSalt(10);
-  // return bcrypt.hash(password, salt);
-  
-  // Para desarrollo, usar crypto builtin
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+  const salt = await bcrypt.genSalt(10);
+  return await bcrypt.hash(password, salt);
 }
 
 /**
  * Compara contraseña con hash
  */
 export async function verifyPassword(password: string, hash: string): Promise<boolean> {
-  // Placeholder: en producción usar bcryptjs
-  // return bcrypt.compare(password, hash);
-  
-  // Para desarrollo, comparar SHA-256
-  const passwordHash = await hashPassword(password);
-  return passwordHash === hash;
+  return await bcrypt.compare(password, hash);
 }
 
 /**
