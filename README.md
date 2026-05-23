@@ -1,3 +1,7 @@
+# OvoGest - Sistema de Gestión Mayorista de Huevos
+
+> Aplicación fullstack para gestión de distribución de huevos. Modernizado May 23, 2026.
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
