@@ -58,9 +58,9 @@ export default function LoginForm({ onSuccess }: LoginFormProps): React.JSX.Elem
     visible: {
       opacity: 1,
       y: 0,
-      transition: { duration: 0.6, ease: 'easeOut' },
+      transition: { duration: 0.6, ease: 'easeOut' as any },
     },
-  };
+  } as any;
 
   const itemVariants = {
     hidden: { opacity: 0, y: 10 },
@@ -69,7 +69,7 @@ export default function LoginForm({ onSuccess }: LoginFormProps): React.JSX.Elem
       y: 0,
       transition: { delay: i * 0.1, duration: 0.4 },
     }),
-  };
+  } as any;
 
   return (
     <motion.div
