@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import React from 'react';
 import { getAuthSession } from '@/lib/auth';
 import { redirect } from 'next/navigation';
@@ -55,9 +56,9 @@ export default async function DashboardPage(): Promise<React.JSX.Element> {
               </div>
               <h2 className="text-xl font-semibold text-white">Inventario</h2>
               <p className="mt-3 text-slate-400">Controla el stock y recibe alertas de producto bajo de forma sencilla.</p>
-              <button className="mt-6 inline-flex items-center rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 px-4 py-3 text-sm font-semibold text-white transition hover:from-amber-600 hover:to-amber-700">
-                Explorar
-              </button>
+              <Link href="/inventario" className="mt-6 inline-flex items-center rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 px-4 py-3 text-sm font-semibold text-white transition hover:from-amber-600 hover:to-amber-700">
+                Ir al inventario
+              </Link>
             </div>
             <div className="group rounded-[1.5rem] border border-white/10 bg-slate-900/80 p-6 transition duration-300 hover:-translate-y-1 hover:border-sky-300/20 hover:bg-slate-900/95 shadow-lg shadow-slate-950/20">
               <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-3xl bg-gradient-to-br from-sky-500 to-cyan-500 text-white shadow-lg shadow-sky-500/20">
@@ -65,9 +66,9 @@ export default async function DashboardPage(): Promise<React.JSX.Element> {
               </div>
               <h2 className="text-xl font-semibold text-white">Pedidos</h2>
               <p className="mt-3 text-slate-400">Crea y administra pedidos con un flujo claro y visual.</p>
-              <button className="mt-6 inline-flex items-center rounded-2xl bg-gradient-to-r from-sky-500 to-cyan-500 px-4 py-3 text-sm font-semibold text-white transition hover:from-sky-600 hover:to-cyan-600">
+              <Link href="/pedidos" className="mt-6 inline-flex items-center rounded-2xl bg-gradient-to-r from-sky-500 to-cyan-500 px-4 py-3 text-sm font-semibold text-white transition hover:from-sky-600 hover:to-cyan-600">
                 Ir a pedidos
-              </button>
+              </Link>
             </div>
             <div className="group rounded-[1.5rem] border border-white/10 bg-slate-900/80 p-6 transition duration-300 hover:-translate-y-1 hover:border-emerald-300/20 hover:bg-slate-900/95 shadow-lg shadow-slate-950/20">
               <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-3xl bg-gradient-to-br from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/20">
@@ -75,9 +76,9 @@ export default async function DashboardPage(): Promise<React.JSX.Element> {
               </div>
               <h2 className="text-xl font-semibold text-white">Entregas</h2>
               <p className="mt-3 text-slate-400">Organiza rutas y sigue el estado de cada envío con rapidez.</p>
-              <button className="mt-6 inline-flex items-center rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-3 text-sm font-semibold text-white transition hover:from-emerald-600 hover:to-teal-600">
+              <Link href="/entregas" className="mt-6 inline-flex items-center rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-3 text-sm font-semibold text-white transition hover:from-emerald-600 hover:to-teal-600">
                 Ver entregas
-              </button>
+              </Link>
             </div>
             <div className="group rounded-[1.5rem] border border-white/10 bg-slate-900/80 p-6 transition duration-300 hover:-translate-y-1 hover:border-violet-300/20 hover:bg-slate-900/95 shadow-lg shadow-slate-950/20">
               <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-3xl bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white shadow-lg shadow-violet-500/20">
@@ -85,9 +86,9 @@ export default async function DashboardPage(): Promise<React.JSX.Element> {
               </div>
               <h2 className="text-xl font-semibold text-white">Reportes</h2>
               <p className="mt-3 text-slate-400">Visualiza métricas clave y tendencias con un vistazo rápido.</p>
-              <button className="mt-6 inline-flex items-center rounded-2xl bg-gradient-to-r from-violet-500 to-fuchsia-500 px-4 py-3 text-sm font-semibold text-white transition hover:from-violet-600 hover:to-fuchsia-600">
+              <Link href="/reportes" className="mt-6 inline-flex items-center rounded-2xl bg-gradient-to-r from-violet-500 to-fuchsia-500 px-4 py-3 text-sm font-semibold text-white transition hover:from-violet-600 hover:to-fuchsia-600">
                 Ver reportes
-              </button>
+              </Link>
             </div>
           </div>
 

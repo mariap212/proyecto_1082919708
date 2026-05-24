@@ -36,6 +36,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# local copies / subproject folders
+proyecto_1082919708/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
