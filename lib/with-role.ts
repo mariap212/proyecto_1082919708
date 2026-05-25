@@ -2,22 +2,25 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthSession, AuthSession } from './auth';
 import type { Role } from './types';
 
-type RouteCtx = { params?: Promise<Record<string, string>> | Record<string, string> };
-
 /**
  * Envuelve un Route Handler exigiendo sesión y un rol permitido.
- * Si no hay sesión → 401. Si el rol no está autorizado → 403.
- * (RN-08: solo admin gestiona usuarios, etc.)
+ * Sin sesión → 401. Rol no autorizado → 403.
+ *
+ * Next.js 15: params siempre llega como Promise (resuelve a {} si la
+ * ruta no tiene segmentos dinámicos).
  */
-export function withRole(
+export function withRole<P extends Record<string, string> = Record<string, string>>(
   allowed: Role[],
   handler: (
     req: NextRequest,
     session: AuthSession,
-    ctx: { params: Record<string, string> }
+    ctx: { params: P }
   ) => Promise<NextResponse>
 ) {
-  return async (req: NextRequest, ctx?: RouteCtx): Promise<NextResponse> => {
+  return async function (
+    req: NextRequest,
+    ctx: { params: Promise<P> }
+  ): Promise<NextResponse> {
     const session = await getAuthSession();
     if (!session) {
       return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
@@ -26,16 +29,8 @@ export function withRole(
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
 
-    let resolvedParams: Record<string, string> = {};
-    const raw = ctx?.params;
-    if (raw) {
-      resolvedParams =
-        typeof (raw as Promise<unknown>).then === 'function'
-          ? await (raw as Promise<Record<string, string>>)
-          : (raw as Record<string, string>);
-    }
-
-    return handler(req, session, { params: resolvedParams });
+    const params = ctx?.params ? await ctx.params : ({} as P);
+    return handler(req, session, { params });
   };
 }
 

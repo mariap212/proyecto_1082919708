@@ -8,7 +8,6 @@ import {
   HeroNumber,
   Panel,
   SkeletonTable,
-  Skeleton,
   StatusDot,
   Button,
   EmptyState,
@@ -461,5 +460,3 @@ function Field({
   );
 }
 
-// Skeleton handled via primitives; no inline FormStyles needed.
-export const _unused = Skeleton;

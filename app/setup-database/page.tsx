@@ -40,7 +40,7 @@ export default function SetupDatabasePage() {
           type: 'error'
         });
       }
-    } catch (error) {
+    } catch {
       setStatus({
         message: 'Error de conexión al inicializar la base de datos.',
         type: 'error'
