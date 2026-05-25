@@ -1,6 +1,7 @@
 import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 import type { JWTPayload } from 'jose';
+import bcrypt from 'bcryptjs';
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || 'dev-secret-key-change-in-production'
@@ -80,27 +81,18 @@ export async function clearAuthCookie(): Promise<void> {
 }
 
 /**
- * Hash simple para desarrollo (reemplazar con bcryptjs en producción)
- * En producción: import bcrypt from 'bcryptjs'
- */
-/**
- * Hash con SHA-256 (para desarrollo y seed mode)
- * En producción con Supabase, usar bcryptjs
+ * Hashea una contraseña usando bcryptjs.
  */
 export async function hashPassword(password: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+  const salt = await bcrypt.genSalt(10);
+  return bcrypt.hash(password, salt);
 }
 
 /**
- * Compara contraseña con hash SHA-256
+ * Compara la contraseña plana con un hash bcrypt.
  */
 export async function verifyPassword(password: string, hash: string): Promise<boolean> {
-  const passwordHash = await hashPassword(password);
-  return passwordHash === hash;
+  return bcrypt.compare(password, hash);
 }
 
 /**
