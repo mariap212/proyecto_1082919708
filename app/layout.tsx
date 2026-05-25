@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import React from 'react';
-import { Geist, Geist_Mono } from 'next/font/google';
+import { Geist, Geist_Mono, Fraunces } from 'next/font/google';
 import './globals.css';
 
 const geistSans = Geist({
@@ -13,22 +13,26 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 });
 
+const fraunces = Fraunces({
+  variable: '--font-fraunces',
+  subsets: ['latin'],
+  axes: ['SOFT', 'WONK', 'opsz'],
+});
+
 export const metadata: Metadata = {
   title: {
-    template: '%s | Mi App Fullstack',
-    default: 'Mi App Fullstack',
+    template: '%s · OvoGest',
+    default: 'OvoGest · Distribución mayorista',
   },
-  description: 'Sistema fullstack TypeScript con Next.js y Vercel',
+  description: 'Sistema de distribución mayorista de huevos',
 };
 
-interface RootLayoutProps {
-  children: React.ReactNode;
-}
-
-export default function RootLayout({ children }: RootLayoutProps): React.JSX.Element {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es" className="dark">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} antialiased font-sans`}
+      >
         {children}
       </body>
     </html>

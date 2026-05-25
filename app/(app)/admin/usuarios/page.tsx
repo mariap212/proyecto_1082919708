@@ -3,6 +3,14 @@
 import { useEffect, useState } from 'react';
 import { apiGet, apiPost, apiPatch, formatDate } from '@/lib/api-client';
 import { PageHeader } from '@/components/layout/PageHeader';
+import {
+  Panel,
+  SkeletonTable,
+  StatusDot,
+  Button,
+  EmptyState,
+} from '@/components/ui/primitives';
+import { Modal } from '@/components/ui/Modal';
 import type { Role } from '@/lib/types';
 
 interface UserBrief {
@@ -16,79 +24,106 @@ interface UserBrief {
   created_at: string;
 }
 
-const ROLE_BADGE: Record<Role, string> = {
-  admin: 'bg-amber-500/15 text-amber-300',
-  vendedor: 'bg-sky-500/15 text-sky-300',
-  bodeguero: 'bg-emerald-500/15 text-emerald-300',
-  conductor: 'bg-violet-500/15 text-violet-300',
+const ROLE_COLOR: Record<Role, 'amber' | 'sky' | 'emerald' | 'violet'> = {
+  admin: 'amber',
+  vendedor: 'sky',
+  bodeguero: 'emerald',
+  conductor: 'violet',
 };
 
 export default function UsuariosPage() {
-  const [users, setUsers] = useState<UserBrief[]>([]);
+  const [users, setUsers] = useState<UserBrief[] | null>(null);
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<UserBrief | null>(null);
   const [refresh, setRefresh] = useState(0);
 
   useEffect(() => {
-    apiGet<UserBrief[]>('/api/users').then(setUsers).catch(() => undefined);
+    apiGet<UserBrief[]>('/api/users').then(setUsers).catch(() => setUsers([]));
   }, [refresh]);
 
   return (
     <>
       <PageHeader
-        title="Usuarios"
-        subtitle="RN-08: solo administrador gestiona usuarios"
-        actions={<button onClick={() => setCreating(true)} className="btn-primary">+ Nuevo usuario</button>}
+        eyebrow="Administración · Acceso"
+        title="Usuarios del sistema"
+        subtitle="Gestión de cuentas y roles. Acceso restringido al rol administrador (RN-08)."
+        actions={<Button onClick={() => setCreating(true)}>+ Nuevo usuario</Button>}
       />
 
-      <div className="rounded-xl border border-white/5 bg-slate-950/40 overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-white/5 text-xs uppercase tracking-wider text-slate-400">
-            <tr>
-              <th className="px-4 py-3 text-left">Nombre</th>
-              <th className="px-4 py-3 text-left">Email</th>
-              <th className="px-4 py-3 text-center">Rol</th>
-              <th className="px-4 py-3 text-center">Estado</th>
-              <th className="px-4 py-3 text-left">Creado</th>
-              <th className="px-4 py-3" />
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-white/5">
-            {users.map((u) => (
-              <tr key={u.id}>
-                <td className="px-4 py-3 text-slate-200">{u.name}</td>
-                <td className="px-4 py-3 text-slate-400">{u.email}</td>
-                <td className="px-4 py-3 text-center">
-                  <span className={`px-2 py-0.5 rounded-full text-xs ${ROLE_BADGE[u.role]}`}>{u.role}</span>
-                </td>
-                <td className="px-4 py-3 text-center">
-                  <span className={`px-2 py-0.5 rounded-full text-xs ${u.is_active ? 'bg-emerald-500/15 text-emerald-300' : 'bg-slate-700/40 text-slate-400'}`}>
-                    {u.is_active ? 'Activo' : 'Inactivo'}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-xs text-slate-500">{formatDate(u.created_at)}</td>
-                <td className="px-4 py-3 text-right">
-                  <button onClick={() => setEditing(u)} className="text-amber-300 text-xs hover:underline">Editar</button>
-                </td>
+      {users === null ? (
+        <SkeletonTable rows={4} cols={5} />
+      ) : users.length === 0 ? (
+        <EmptyState glyph="∅" title="Sin usuarios" />
+      ) : (
+        <Panel padded={false}>
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Email</th>
+                <th>Rol</th>
+                <th>Creado</th>
+                <th>Estado</th>
+                <th />
               </tr>
-            ))}
-            {!users.length && (
-              <tr><td colSpan={6} className="px-4 py-6 text-center text-slate-500">Sin usuarios</td></tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {users.map((u) => (
+                <tr key={u.id}>
+                  <td>
+                    <div className="flex items-center gap-3">
+                      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-slate-700 to-slate-900 grid place-items-center text-[0.65rem] font-medium text-slate-300 ring-1 ring-white/10">
+                        {u.name.slice(0, 1).toUpperCase()}
+                      </div>
+                      <span className="text-slate-100">{u.name}</span>
+                    </div>
+                  </td>
+                  <td className="mono text-xs text-slate-400">{u.email}</td>
+                  <td>
+                    <StatusDot color={ROLE_COLOR[u.role]} label={u.role} />
+                  </td>
+                  <td className="text-xs text-slate-500 tabular-nums">{formatDate(u.created_at)}</td>
+                  <td>
+                    {u.is_active ? (
+                      <StatusDot color="emerald" label="activo" />
+                    ) : (
+                      <StatusDot color="slate" label="inactivo" />
+                    )}
+                  </td>
+                  <td className="text-right">
+                    <button
+                      onClick={() => setEditing(u)}
+                      className="text-amber-300 text-xs hover:text-amber-200 transition-colors"
+                    >
+                      Editar →
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Panel>
+      )}
 
-      {creating && <NewUserModal onClose={() => setCreating(false)} onSaved={() => { setCreating(false); setRefresh((r) => r + 1); }} />}
-      {editing && <EditUserModal user={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); setRefresh((r) => r + 1); }} />}
-
-      <style>{`
-        .input { width:100%; padding:.5rem .75rem; border-radius:.5rem; background:rgba(2,6,23,.6); color:#e2e8f0; border:1px solid rgba(255,255,255,.08); font-size:.875rem; outline:none; }
-        .input:focus { border-color:rgba(245,158,11,.5); }
-        .btn-primary { padding:.6rem 1rem; border-radius:.5rem; background:linear-gradient(to right,#f59e0b,#d97706); color:#fff; font-weight:600; font-size:.875rem; }
-        .btn-primary:disabled { opacity:.5; cursor:not-allowed; }
-        .btn-secondary { padding:.6rem 1rem; border-radius:.5rem; background:rgba(255,255,255,.06); color:#cbd5e1; font-weight:500; font-size:.875rem; }
-      `}</style>
+      {creating && (
+        <NewUserModal
+          onClose={() => setCreating(false)}
+          onSaved={() => {
+            setCreating(false);
+            setRefresh((r) => r + 1);
+          }}
+        />
+      )}
+      {editing && (
+        <EditUserModal
+          user={editing}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null);
+            setRefresh((r) => r + 1);
+          }}
+        />
+      )}
     </>
   );
 }
@@ -116,28 +151,61 @@ function NewUserModal({ onClose, onSaved }: { onClose: () => void; onSaved: () =
   }
 
   return (
-    <Modal title="Nuevo usuario" onClose={onClose}>
-      <form onSubmit={submit} className="space-y-3">
-        <input className="input" placeholder="Nombre completo" required value={name} onChange={(e) => setName(e.target.value)} />
-        <input className="input" type="email" placeholder="Email" required value={email} onChange={(e) => setEmail(e.target.value)} />
-        <select className="input" value={role} onChange={(e) => setRole(e.target.value as Role)}>
-          <option value="admin">Admin</option>
-          <option value="vendedor">Vendedor</option>
-          <option value="bodeguero">Bodeguero</option>
-          <option value="conductor">Conductor</option>
-        </select>
-        <input className="input" type="password" placeholder="Contraseña inicial" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} />
+    <Modal title="Nuevo usuario" eyebrow="Administración · Acceso" onClose={onClose}>
+      <form onSubmit={submit} className="space-y-4">
+        <Field label="Nombre completo">
+          <input className="input" required value={name} onChange={(e) => setName(e.target.value)} />
+        </Field>
+        <Field label="Email">
+          <input
+            className="input mono"
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        </Field>
+        <Field label="Rol">
+          <select className="select" value={role} onChange={(e) => setRole(e.target.value as Role)}>
+            <option value="admin">Administrador</option>
+            <option value="vendedor">Vendedor</option>
+            <option value="bodeguero">Bodeguero</option>
+            <option value="conductor">Conductor</option>
+          </select>
+        </Field>
+        <Field label="Contraseña inicial">
+          <input
+            className="input"
+            type="password"
+            required
+            minLength={6}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </Field>
         {err && <p className="text-rose-400 text-sm">{err}</p>}
         <div className="flex gap-2 justify-end pt-2">
-          <button type="button" onClick={onClose} className="btn-secondary">Cancelar</button>
-          <button disabled={busy} className="btn-primary">{busy ? 'Creando…' : 'Crear'}</button>
+          <Button type="button" variant="ghost" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button type="submit" disabled={busy}>
+            {busy ? 'Creando…' : 'Crear usuario'}
+          </Button>
         </div>
       </form>
     </Modal>
   );
 }
 
-function EditUserModal({ user, onClose, onSaved }: { user: UserBrief; onClose: () => void; onSaved: () => void }) {
+function EditUserModal({
+  user,
+  onClose,
+  onSaved,
+}: {
+  user: UserBrief;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
   const [name, setName] = useState(user.name);
   const [role, setRole] = useState<Role>(user.role);
   const [active, setActive] = useState(user.is_active);
@@ -162,40 +230,56 @@ function EditUserModal({ user, onClose, onSaved }: { user: UserBrief; onClose: (
   }
 
   return (
-    <Modal title={`Editar ${user.email}`} onClose={onClose}>
-      <form onSubmit={submit} className="space-y-3">
-        <input className="input" value={name} onChange={(e) => setName(e.target.value)} />
-        <select className="input" value={role} onChange={(e) => setRole(e.target.value as Role)}>
-          <option value="admin">Admin</option>
-          <option value="vendedor">Vendedor</option>
-          <option value="bodeguero">Bodeguero</option>
-          <option value="conductor">Conductor</option>
-        </select>
-        <label className="flex items-center gap-2 text-sm text-slate-300">
-          <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} />
-          Activo
+    <Modal title={user.email} eyebrow="Editar usuario" onClose={onClose}>
+      <form onSubmit={submit} className="space-y-4">
+        <Field label="Nombre">
+          <input className="input" value={name} onChange={(e) => setName(e.target.value)} />
+        </Field>
+        <Field label="Rol">
+          <select className="select" value={role} onChange={(e) => setRole(e.target.value as Role)}>
+            <option value="admin">Administrador</option>
+            <option value="vendedor">Vendedor</option>
+            <option value="bodeguero">Bodeguero</option>
+            <option value="conductor">Conductor</option>
+          </select>
+        </Field>
+        <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={active}
+            onChange={(e) => setActive(e.target.checked)}
+            className="accent-amber-500"
+          />
+          Cuenta activa
         </label>
-        <input className="input" type="password" placeholder="Nueva contraseña (vacío = mantener)" value={password} onChange={(e) => setPassword(e.target.value)} />
+        <Field label="Nueva contraseña (vacío = mantener)">
+          <input
+            className="input"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="••••••••"
+          />
+        </Field>
         {err && <p className="text-rose-400 text-sm">{err}</p>}
         <div className="flex gap-2 justify-end pt-2">
-          <button type="button" onClick={onClose} className="btn-secondary">Cancelar</button>
-          <button disabled={busy} className="btn-primary">{busy ? 'Guardando…' : 'Guardar'}</button>
+          <Button type="button" variant="ghost" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button type="submit" disabled={busy}>
+            {busy ? 'Guardando…' : 'Guardar cambios'}
+          </Button>
         </div>
       </form>
     </Modal>
   );
 }
 
-function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-slate-900 border border-white/10 rounded-xl max-w-md w-full p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold text-slate-100">{title}</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-200">✕</button>
-        </div>
-        {children}
-      </div>
-    </div>
+    <label className="block">
+      <span className="eyebrow block mb-2">{label}</span>
+      {children}
+    </label>
   );
 }

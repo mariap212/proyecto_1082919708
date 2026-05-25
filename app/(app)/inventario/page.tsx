@@ -3,94 +3,142 @@
 import { useEffect, useState } from 'react';
 import { apiGet, apiPost, formatDateTime, formatCurrency } from '@/lib/api-client';
 import { PageHeader } from '@/components/layout/PageHeader';
+import {
+  Eyebrow,
+  HeroNumber,
+  Panel,
+  SkeletonTable,
+  Skeleton,
+  StatusDot,
+  Button,
+  EmptyState,
+} from '@/components/ui/primitives';
 import type { StockView, InventoryMovement, Supplier } from '@/lib/types';
 
 type Tab = 'stock' | 'entrada' | 'movimientos' | 'ajuste';
 
+const TABS: Array<{ id: Tab; label: string; eyebrow: string }> = [
+  { id: 'stock', label: 'Stock actual', eyebrow: '01' },
+  { id: 'entrada', label: 'Registrar entrada', eyebrow: '02' },
+  { id: 'ajuste', label: 'Ajuste manual', eyebrow: '03' },
+  { id: 'movimientos', label: 'Historial', eyebrow: '04' },
+];
+
 export default function InventarioPage() {
   const [tab, setTab] = useState<Tab>('stock');
-  const [stock, setStock] = useState<StockView[]>([]);
+  const [stock, setStock] = useState<StockView[] | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
-    apiGet<StockView[]>('/api/inventory').then(setStock).catch(() => undefined);
+    apiGet<StockView[]>('/api/inventory').then(setStock).catch(() => setStock([]));
   }, [refreshKey]);
 
   return (
     <>
-      <PageHeader title="Inventario" subtitle="Control de stock por tipo de huevo" />
+      <PageHeader
+        eyebrow="Bodega"
+        title="Inventario"
+        subtitle="Control de stock por tipo de huevo con alertas y registro de movimientos."
+      />
 
-      <div className="border-b border-white/5 mb-6 flex gap-1">
-        <TabBtn active={tab === 'stock'} onClick={() => setTab('stock')}>Stock actual</TabBtn>
-        <TabBtn active={tab === 'entrada'} onClick={() => setTab('entrada')}>Registrar entrada</TabBtn>
-        <TabBtn active={tab === 'ajuste'} onClick={() => setTab('ajuste')}>Ajuste manual</TabBtn>
-        <TabBtn active={tab === 'movimientos'} onClick={() => setTab('movimientos')}>Movimientos</TabBtn>
+      {/* Tabs — editorial style */}
+      <nav className="mb-8 flex gap-8 border-b border-white/[0.06] -mb-px overflow-x-auto" role="tablist">
+        {TABS.map((t) => {
+          const active = tab === t.id;
+          return (
+            <button
+              key={t.id}
+              role="tab"
+              aria-selected={active}
+              onClick={() => setTab(t.id)}
+              className={`group relative pb-4 flex items-baseline gap-2 transition-colors ${
+                active ? 'text-slate-100' : 'text-slate-500 hover:text-slate-300'
+              }`}
+            >
+              <span
+                className={`mono text-[0.6rem] tabular-nums ${
+                  active ? 'text-amber-400' : 'text-slate-600 group-hover:text-slate-500'
+                }`}
+              >
+                {t.eyebrow}
+              </span>
+              <span className="text-sm font-medium tracking-tight">{t.label}</span>
+              {active && (
+                <span className="absolute left-0 right-0 -bottom-px h-px bg-amber-400" />
+              )}
+            </button>
+          );
+        })}
+      </nav>
+
+      <div className="animate-rise">
+        {tab === 'stock' && <StockTab stock={stock} />}
+        {tab === 'entrada' && (
+          <EntradaTab stock={stock ?? []} onDone={() => setRefreshKey((k) => k + 1)} />
+        )}
+        {tab === 'ajuste' && (
+          <AjusteTab stock={stock ?? []} onDone={() => setRefreshKey((k) => k + 1)} />
+        )}
+        {tab === 'movimientos' && <MovimientosTab stock={stock ?? []} />}
       </div>
-
-      {tab === 'stock' && <StockTab stock={stock} />}
-      {tab === 'entrada' && <EntradaTab stock={stock} onDone={() => setRefreshKey((k) => k + 1)} />}
-      {tab === 'ajuste' && <AjusteTab stock={stock} onDone={() => setRefreshKey((k) => k + 1)} />}
-      {tab === 'movimientos' && <MovimientosTab stock={stock} />}
     </>
   );
 }
 
-function TabBtn({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      onClick={onClick}
-      className={`px-4 py-2 text-sm rounded-t-md transition ${
-        active
-          ? 'bg-amber-500/10 text-amber-200 border-b-2 border-amber-400'
-          : 'text-slate-400 hover:text-slate-200'
-      }`}
-    >
-      {children}
-    </button>
-  );
-}
+function StockTab({ stock }: { stock: StockView[] | null }) {
+  if (stock === null) return <SkeletonTable rows={5} cols={6} />;
+  if (stock.length === 0)
+    return (
+      <EmptyState
+        glyph="∅"
+        title="Sin productos configurados"
+        description="Crea tipos de huevo en el catálogo para empezar a manejar inventario."
+      />
+    );
 
-function StockTab({ stock }: { stock: StockView[] }) {
   return (
-    <div className="rounded-xl border border-white/5 bg-slate-950/40 overflow-hidden">
-      <table className="w-full">
-        <thead className="bg-white/5 text-xs uppercase tracking-wider text-slate-400">
+    <Panel padded={false}>
+      <table className="data-table">
+        <thead>
           <tr>
-            <th className="px-4 py-3 text-left">Código</th>
-            <th className="px-4 py-3 text-left">Producto</th>
-            <th className="px-4 py-3 text-right">Stock</th>
-            <th className="px-4 py-3 text-right">Mínimo</th>
-            <th className="px-4 py-3 text-right">Precio/u</th>
-            <th className="px-4 py-3 text-right">Valoración</th>
-            <th className="px-4 py-3 text-center">Estado</th>
+            <th>Código</th>
+            <th>Producto</th>
+            <th className="text-right">Stock</th>
+            <th className="text-right">Mínimo</th>
+            <th className="text-right">Precio/u</th>
+            <th className="text-right">Valoración</th>
+            <th>Estado</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-white/5">
+        <tbody>
           {stock.map((s) => (
             <tr key={s.egg_type_id}>
-              <td className="px-4 py-3 font-mono text-amber-300">{s.code}</td>
-              <td className="px-4 py-3 text-slate-200">{s.name}</td>
-              <td className="px-4 py-3 text-right text-slate-100">{s.current_stock.toLocaleString()}</td>
-              <td className="px-4 py-3 text-right text-slate-400">{s.min_stock}</td>
-              <td className="px-4 py-3 text-right text-slate-300">{formatCurrency(s.price_per_unit)}</td>
-              <td className="px-4 py-3 text-right text-slate-300">{formatCurrency(s.current_stock * s.price_per_unit)}</td>
-              <td className="px-4 py-3 text-center">
+              <td className="mono text-amber-300 text-sm">{s.code}</td>
+              <td>
+                <span className="text-slate-100">{s.name}</span>
+              </td>
+              <td className="text-right">
+                <span className="num-hero text-base not-italic text-white tabular-nums">
+                  {s.current_stock.toLocaleString('es-CO')}
+                </span>
+              </td>
+              <td className="text-right text-slate-500 text-sm tabular-nums">{s.min_stock}</td>
+              <td className="text-right text-slate-300 tabular-nums">{formatCurrency(s.price_per_unit)}</td>
+              <td className="text-right text-slate-100 tabular-nums">
+                {formatCurrency(s.current_stock * s.price_per_unit)}
+              </td>
+              <td>
                 {s.is_low ? (
-                  <span className="inline-block px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-300 text-xs">⚠ Bajo</span>
+                  <StatusDot color="rose" label="bajo mínimo" pulse />
                 ) : (
-                  <span className="inline-block px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 text-xs">✓ OK</span>
+                  <StatusDot color="emerald" label="en operación" />
                 )}
               </td>
             </tr>
           ))}
-          {!stock.length && (
-            <tr>
-              <td colSpan={7} className="px-4 py-6 text-center text-slate-500">Cargando…</td>
-            </tr>
-          )}
         </tbody>
       </table>
-    </div>
+    </Panel>
   );
 }
 
@@ -100,7 +148,7 @@ function EntradaTab({ stock, onDone }: { stock: StockView[]; onDone: () => void 
   const [supplierId, setSupplierId] = useState('');
   const [notes, setNotes] = useState('');
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const [msg, setMsg] = useState<string | null>(null);
+  const [msg, setMsg] = useState<{ tone: 'ok' | 'err'; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -118,56 +166,131 @@ function EntradaTab({ stock, onDone }: { stock: StockView[]; onDone: () => void 
         supplier_id: supplierId || undefined,
         notes: notes || undefined,
       });
-      setMsg(`✓ ${qty} unidades registradas`);
+      setMsg({ tone: 'ok', text: `${qty.toLocaleString('es-CO')} unidades sumadas al stock` });
       setQty(100);
       setNotes('');
       onDone();
     } catch (e) {
-      setMsg(`✗ ${(e as Error).message}`);
+      setMsg({ tone: 'err', text: (e as Error).message });
     } finally {
       setBusy(false);
     }
   }
 
+  const selected = stock.find((s) => s.egg_type_id === eggTypeId);
+
   return (
-    <form onSubmit={submit} className="max-w-xl rounded-xl border border-white/5 bg-slate-950/40 p-6 space-y-4">
-      <Field label="Tipo de huevo">
-        <select required value={eggTypeId} onChange={(e) => setEggTypeId(e.target.value)} className="input">
-          <option value="">— seleccionar —</option>
-          {stock.map((s) => (
-            <option key={s.egg_type_id} value={s.egg_type_id}>
-              {s.code} — {s.name} (stock actual: {s.current_stock})
-            </option>
-          ))}
-        </select>
-      </Field>
-      <Field label="Cantidad (unidades)">
-        <input
-          type="number"
-          required
-          min={1}
-          value={qty}
-          onChange={(e) => setQty(Number(e.target.value))}
-          className="input"
-        />
-      </Field>
-      <Field label="Proveedor (opcional)">
-        <select value={supplierId} onChange={(e) => setSupplierId(e.target.value)} className="input">
-          <option value="">—</option>
-          {suppliers.map((s) => (
-            <option key={s.id} value={s.id}>{s.name}</option>
-          ))}
-        </select>
-      </Field>
-      <Field label="Notas">
-        <input value={notes} onChange={(e) => setNotes(e.target.value)} className="input" placeholder="Ej: Lote del 25/05" />
-      </Field>
-      <button disabled={busy || !eggTypeId} className="btn-primary">
-        {busy ? 'Guardando…' : 'Registrar entrada'}
-      </button>
-      {msg && <p className={msg.startsWith('✓') ? 'text-emerald-400 text-sm' : 'text-rose-400 text-sm'}>{msg}</p>}
-      <FormStyles />
-    </form>
+    <div className="grid lg:grid-cols-3 gap-8">
+      <form onSubmit={submit} className="lg:col-span-2">
+        <Panel>
+          <Eyebrow>Movimiento · Entrada</Eyebrow>
+          <h2 className="heading-serif text-2xl text-slate-100 mt-2 mb-6">
+            Recepción desde proveedor
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Field label="Tipo de huevo" hint="Stock actual aparece a la derecha">
+              <select
+                required
+                value={eggTypeId}
+                onChange={(e) => setEggTypeId(e.target.value)}
+                className="select"
+              >
+                <option value="">— Seleccionar —</option>
+                {stock.map((s) => (
+                  <option key={s.egg_type_id} value={s.egg_type_id}>
+                    {s.code} — {s.name} (actual: {s.current_stock})
+                  </option>
+                ))}
+              </select>
+            </Field>
+
+            <Field label="Cantidad (unidades)">
+              <input
+                type="number"
+                required
+                min={1}
+                value={qty}
+                onChange={(e) => setQty(Number(e.target.value))}
+                className="input"
+              />
+            </Field>
+
+            <Field label="Proveedor (opcional)">
+              <select
+                value={supplierId}
+                onChange={(e) => setSupplierId(e.target.value)}
+                className="select"
+              >
+                <option value="">—</option>
+                {suppliers.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+
+            <Field label="Notas / lote">
+              <input
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                className="input"
+                placeholder="Ej: Lote del 25/05"
+              />
+            </Field>
+          </div>
+
+          <div className="mt-6 pt-6 border-t border-white/[0.05] flex items-center justify-between gap-4">
+            {msg && (
+              <p
+                className={`text-sm ${msg.tone === 'ok' ? 'text-emerald-400' : 'text-rose-400'}`}
+              >
+                {msg.tone === 'ok' ? '✓ ' : '✗ '}
+                {msg.text}
+              </p>
+            )}
+            <Button type="submit" disabled={busy || !eggTypeId} className="ml-auto">
+              {busy ? 'Registrando…' : 'Registrar entrada'}
+            </Button>
+          </div>
+        </Panel>
+      </form>
+
+      <aside className="space-y-4">
+        <Panel>
+          <Eyebrow>Resumen</Eyebrow>
+          {selected ? (
+            <>
+              <div className="mt-3 heading-serif text-2xl text-slate-100">{selected.name}</div>
+              <div className="mt-1 text-xs text-slate-500">Código {selected.code}</div>
+              <div className="mt-6 grid grid-cols-2 gap-4">
+                <div>
+                  <Eyebrow>Stock actual</Eyebrow>
+                  <HeroNumber value={selected.current_stock} size="md" />
+                </div>
+                <div>
+                  <Eyebrow>Tras esta entrada</Eyebrow>
+                  <HeroNumber
+                    value={(selected.current_stock + qty).toLocaleString('es-CO')}
+                    size="md"
+                    className="text-amber-200"
+                  />
+                </div>
+              </div>
+              <div className="mt-4 pt-4 border-t border-white/[0.05] text-xs text-slate-500">
+                Mínimo configurado:{' '}
+                <span className="text-slate-300 tabular-nums">{selected.min_stock}</span>
+              </div>
+            </>
+          ) : (
+            <p className="text-sm text-slate-500 mt-3">
+              Selecciona un tipo para ver el impacto del movimiento.
+            </p>
+          )}
+        </Panel>
+      </aside>
+    </div>
   );
 }
 
@@ -175,7 +298,7 @@ function AjusteTab({ stock, onDone }: { stock: StockView[]; onDone: () => void }
   const [eggTypeId, setEggTypeId] = useState('');
   const [delta, setDelta] = useState(0);
   const [notes, setNotes] = useState('');
-  const [msg, setMsg] = useState<string | null>(null);
+  const [msg, setMsg] = useState<{ tone: 'ok' | 'err'; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
 
   async function submit(e: React.FormEvent) {
@@ -184,110 +307,159 @@ function AjusteTab({ stock, onDone }: { stock: StockView[]; onDone: () => void }
     setMsg(null);
     try {
       await apiPost('/api/inventory/adjust', { egg_type_id: eggTypeId, delta, notes });
-      setMsg(`✓ Ajuste ${delta > 0 ? '+' : ''}${delta} aplicado`);
+      setMsg({ tone: 'ok', text: `Ajuste ${delta > 0 ? '+' : ''}${delta} aplicado` });
       setDelta(0);
       setNotes('');
       onDone();
     } catch (e) {
-      setMsg(`✗ ${(e as Error).message}`);
+      setMsg({ tone: 'err', text: (e as Error).message });
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <form onSubmit={submit} className="max-w-xl rounded-xl border border-white/5 bg-slate-950/40 p-6 space-y-4">
-      <p className="text-xs text-amber-300/80 bg-amber-500/5 border border-amber-500/20 rounded-md p-3">
-        ⚠ Ajuste manual. Solo admin. Use valores positivos para sumar, negativos para restar.
-      </p>
-      <Field label="Tipo de huevo">
-        <select required value={eggTypeId} onChange={(e) => setEggTypeId(e.target.value)} className="input">
-          <option value="">— seleccionar —</option>
-          {stock.map((s) => (
-            <option key={s.egg_type_id} value={s.egg_type_id}>{s.code} — {s.name}</option>
-          ))}
-        </select>
-      </Field>
-      <Field label="Delta (positivo o negativo)">
-        <input type="number" required value={delta} onChange={(e) => setDelta(Number(e.target.value))} className="input" />
-      </Field>
-      <Field label="Motivo (obligatorio)">
-        <input required value={notes} onChange={(e) => setNotes(e.target.value)} className="input" />
-      </Field>
-      <button disabled={busy || !eggTypeId || delta === 0 || !notes} className="btn-primary">
-        {busy ? 'Guardando…' : 'Aplicar ajuste'}
-      </button>
-      {msg && <p className={msg.startsWith('✓') ? 'text-emerald-400 text-sm' : 'text-rose-400 text-sm'}>{msg}</p>}
-      <FormStyles />
+    <form onSubmit={submit} className="max-w-2xl">
+      <Panel>
+        <Eyebrow>Movimiento · Ajuste</Eyebrow>
+        <h2 className="heading-serif text-2xl text-slate-100 mt-2">Corrección manual de stock</h2>
+        <p className="text-xs text-slate-500 mt-2 mb-6">
+          Solo administrador. Use valores positivos para sumar o negativos para restar al stock.
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Field label="Tipo de huevo">
+            <select
+              required
+              value={eggTypeId}
+              onChange={(e) => setEggTypeId(e.target.value)}
+              className="select"
+            >
+              <option value="">— Seleccionar —</option>
+              {stock.map((s) => (
+                <option key={s.egg_type_id} value={s.egg_type_id}>
+                  {s.code} — {s.name}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Delta (positivo o negativo)">
+            <input
+              type="number"
+              required
+              value={delta}
+              onChange={(e) => setDelta(Number(e.target.value))}
+              className="input"
+            />
+          </Field>
+          <div className="md:col-span-2">
+            <Field label="Motivo (obligatorio)">
+              <input
+                required
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                className="input"
+                placeholder="Ej: corrección por conteo físico"
+              />
+            </Field>
+          </div>
+        </div>
+
+        <div className="mt-6 pt-6 border-t border-white/[0.05] flex items-center justify-between gap-4">
+          {msg && (
+            <p className={`text-sm ${msg.tone === 'ok' ? 'text-emerald-400' : 'text-rose-400'}`}>
+              {msg.tone === 'ok' ? '✓ ' : '✗ '}
+              {msg.text}
+            </p>
+          )}
+          <Button
+            type="submit"
+            disabled={busy || !eggTypeId || delta === 0 || !notes}
+            className="ml-auto"
+          >
+            {busy ? 'Aplicando…' : 'Aplicar ajuste'}
+          </Button>
+        </div>
+      </Panel>
     </form>
   );
 }
 
 function MovimientosTab({ stock }: { stock: StockView[] }) {
-  const [movs, setMovs] = useState<InventoryMovement[]>([]);
+  const [movs, setMovs] = useState<InventoryMovement[] | null>(null);
   const codeMap = new Map(stock.map((s) => [s.egg_type_id, s.code]));
 
   useEffect(() => {
-    apiGet<InventoryMovement[]>('/api/inventory/movements?limit=200').then(setMovs).catch(() => undefined);
+    apiGet<InventoryMovement[]>('/api/inventory/movements?limit=200')
+      .then(setMovs)
+      .catch(() => setMovs([]));
   }, []);
 
-  const typeColor: Record<string, string> = {
-    entrada: 'text-emerald-400',
-    salida: 'text-rose-400',
-    devolucion: 'text-sky-400',
-    ajuste: 'text-amber-400',
+  if (movs === null) return <SkeletonTable rows={6} cols={5} />;
+  if (movs.length === 0)
+    return <EmptyState glyph="—" title="Sin movimientos registrados" description="Las entradas, salidas, devoluciones y ajustes aparecerán aquí en orden cronológico." />;
+
+  const typeColor: Record<string, 'emerald' | 'rose' | 'sky' | 'amber'> = {
+    entrada: 'emerald',
+    salida: 'rose',
+    devolucion: 'sky',
+    ajuste: 'amber',
   };
 
   return (
-    <div className="rounded-xl border border-white/5 bg-slate-950/40 overflow-hidden">
-      <table className="w-full text-sm">
-        <thead className="bg-white/5 text-xs uppercase tracking-wider text-slate-400">
+    <Panel padded={false}>
+      <table className="data-table">
+        <thead>
           <tr>
-            <th className="px-4 py-3 text-left">Fecha</th>
-            <th className="px-4 py-3 text-left">Tipo</th>
-            <th className="px-4 py-3 text-left">Producto</th>
-            <th className="px-4 py-3 text-right">Cantidad</th>
-            <th className="px-4 py-3 text-left">Notas</th>
+            <th>Fecha</th>
+            <th>Tipo</th>
+            <th>Producto</th>
+            <th className="text-right">Cantidad</th>
+            <th>Notas</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-white/5">
+        <tbody>
           {movs.map((m) => (
             <tr key={m.id}>
-              <td className="px-4 py-2 text-slate-400 text-xs">{formatDateTime(m.created_at)}</td>
-              <td className={`px-4 py-2 ${typeColor[m.type] ?? ''}`}>{m.type}</td>
-              <td className="px-4 py-2 text-slate-200">{codeMap.get(m.egg_type_id) ?? m.egg_type_id.slice(0, 8)}</td>
-              <td className="px-4 py-2 text-right text-slate-100">{m.quantity.toLocaleString()}</td>
-              <td className="px-4 py-2 text-slate-400 text-xs">{m.notes ?? ''}</td>
+              <td className="text-xs text-slate-500 tabular-nums">{formatDateTime(m.created_at)}</td>
+              <td>
+                <StatusDot color={typeColor[m.type] ?? 'slate'} label={m.type} />
+              </td>
+              <td className="mono text-amber-300/80 text-sm">
+                {codeMap.get(m.egg_type_id) ?? m.egg_type_id.slice(0, 8)}
+              </td>
+              <td className="text-right">
+                <span className="num-hero text-base not-italic text-white tabular-nums">
+                  {m.type === 'salida' ? '−' : '+'}
+                  {m.quantity.toLocaleString('es-CO')}
+                </span>
+              </td>
+              <td className="text-xs text-slate-500 max-w-xs truncate">{m.notes ?? '—'}</td>
             </tr>
           ))}
-          {!movs.length && (
-            <tr>
-              <td colSpan={5} className="px-4 py-6 text-center text-slate-500">Sin movimientos registrados</td>
-            </tr>
-          )}
         </tbody>
       </table>
-    </div>
+    </Panel>
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
   return (
     <label className="block">
-      <span className="block text-xs uppercase tracking-wider text-slate-400 mb-1">{label}</span>
+      <span className="eyebrow block mb-2">{label}</span>
       {children}
+      {hint && <span className="block text-[0.65rem] text-slate-600 mt-1.5">{hint}</span>}
     </label>
   );
 }
 
-function FormStyles() {
-  return (
-    <style>{`
-      .input { width:100%; padding:.5rem .75rem; border-radius:.5rem; background:rgba(2,6,23,.6); color:#e2e8f0; border:1px solid rgba(255,255,255,.08); font-size:.875rem; outline:none; }
-      .input:focus { border-color:rgba(245,158,11,.5); }
-      .btn-primary { padding:.6rem 1rem; border-radius:.5rem; background:linear-gradient(to right,#f59e0b,#d97706); color:#fff; font-weight:600; font-size:.875rem; transition:opacity .2s; }
-      .btn-primary:hover:not(:disabled) { opacity:.9 }
-      .btn-primary:disabled { opacity:.5; cursor:not-allowed; }
-    `}</style>
-  );
-}
+// Skeleton handled via primitives; no inline FormStyles needed.
+export const _unused = Skeleton;
