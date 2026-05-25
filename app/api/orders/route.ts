@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { withRole } from '@/lib/with-role';
 import { ok, created, fail, readJson } from '@/lib/api-helpers';
 import { listOrders, createOrder } from '@/lib/services/order-service';
+import { recordAudit } from '@/lib/services/audit-service';
 import type { OrderStatus } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -32,7 +33,19 @@ export const POST = withRole(['admin', 'vendedor'], async (req: NextRequest, ses
       items: Array<{ egg_type_id: string; quantity: number }>;
       notes?: string;
     }>(req);
-    return created(await createOrder({ ...body, created_by: session.id }));
+    const order = await createOrder({ ...body, created_by: session.id });
+    await recordAudit({
+      actor: session,
+      action: 'order.create',
+      resource_type: 'order',
+      resource_id: order.id,
+      metadata: {
+        client_id: order.client_id,
+        total: Number(order.total),
+        item_count: order.items.length,
+      },
+    });
+    return created(order);
   } catch (e) {
     return fail(e);
   }

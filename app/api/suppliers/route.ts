@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { withRole } from '@/lib/with-role';
 import { ok, created, fail, readJson } from '@/lib/api-helpers';
 import { listSuppliers, createSupplier } from '@/lib/services/supplier-service';
+import { recordAudit } from '@/lib/services/audit-service';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,10 +20,18 @@ export const GET = withRole(['admin', 'vendedor', 'bodeguero'], async (req) => {
   }
 });
 
-export const POST = withRole(['admin', 'bodeguero'], async (req: NextRequest) => {
+export const POST = withRole(['admin', 'bodeguero'], async (req: NextRequest, session) => {
   try {
     const body = await readJson<{ name: string; contact: string | null; phone: string | null; address: string | null; notes: string | null }>(req);
-    return created(await createSupplier(body));
+    const supplier = await createSupplier(body);
+    await recordAudit({
+      actor: session,
+      action: 'supplier.create',
+      resource_type: 'supplier',
+      resource_id: supplier.id,
+      metadata: { name: supplier.name },
+    });
+    return created(supplier);
   } catch (e) {
     return fail(e);
   }

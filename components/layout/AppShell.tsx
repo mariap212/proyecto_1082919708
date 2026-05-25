@@ -33,6 +33,7 @@ const NAV: NavItem[] = [
   { href: '/reportes',             label: 'Reportes',    roles: ['admin', 'bodeguero'], group: 'ops' },
 
   { href: '/admin/usuarios',       label: 'Usuarios',    roles: ['admin'], group: 'admin' },
+  { href: '/admin/auditoria',      label: 'Auditoría',   roles: ['admin'], group: 'admin' },
 ];
 
 const GROUP_LABELS: Record<string, string> = {

@@ -139,3 +139,46 @@ export interface Invoice {
   voided_at: string | null;
   created_at: string;
 }
+
+export type AuditAction =
+  | 'order.create'
+  | 'order.approve'
+  | 'order.cancel'
+  | 'invoice.void'
+  | 'inventory.entry'
+  | 'inventory.adjust'
+  | 'inventory.return'
+  | 'delivery.assign'
+  | 'delivery.status'
+  | 'user.create'
+  | 'user.update'
+  | 'egg_type.create'
+  | 'egg_type.update'
+  | 'supplier.create'
+  | 'supplier.update'
+  | 'supplier.deactivate'
+  | 'client.create'
+  | 'client.update'
+  | 'client.deactivate';
+
+export type AuditResource =
+  | 'order'
+  | 'invoice'
+  | 'inventory'
+  | 'delivery'
+  | 'user'
+  | 'egg_type'
+  | 'supplier'
+  | 'client';
+
+export interface AuditLog {
+  id: string;
+  actor_id: string | null;
+  actor_email: string | null;
+  actor_role: string | null;
+  action: AuditAction;
+  resource_type: AuditResource;
+  resource_id: string | null;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+}
