@@ -1,11 +1,7 @@
 const config = {
   plugins: {
-    "@tailwindcss/nesting": {},
-    "@tailwindcss/postcss": {
-      corePlugins: {
-        preflight: true,
-      },
-    },
+    tailwindcss: {},
+    autoprefixer: {},
   },
 };
 

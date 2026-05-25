@@ -2,7 +2,7 @@
   {
     "id": "usr_admin_seed_001",
     "email": "admin@ovogest.local",
-    "password_hash": "ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f",
+    "password_hash": "$2b$10$WLwhWkTQ3MgskAxukKJtau0zS3qsZvvrf8963Nm8HRYv1NH3rfFbW",
     "name": "Administrador Sistema",
     "role": "admin",
     "is_active": true,
@@ -14,7 +14,7 @@
   {
     "id": "usr_vendedor_seed_001",
     "email": "vendedor@ovogest.local",
-    "password_hash": "ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f",
+    "password_hash": "$2b$10$WLwhWkTQ3MgskAxukKJtau0zS3qsZvvrf8963Nm8HRYv1NH3rfFbW",
     "name": "Juan Vendedor",
     "role": "vendedor",
     "is_active": true,
@@ -26,7 +26,7 @@
   {
     "id": "usr_bodeguero_seed_001",
     "email": "bodeguero@ovogest.local",
-    "password_hash": "ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f",
+    "password_hash": "$2b$10$WLwhWkTQ3MgskAxukKJtau0zS3qsZvvrf8963Nm8HRYv1NH3rfFbW",
     "name": "Carlos Bodeguero",
     "role": "bodeguero",
     "is_active": true,
@@ -38,7 +38,7 @@
   {
     "id": "usr_conductor_seed_001",
     "email": "conductor@ovogest.local",
-    "password_hash": "ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f",
+    "password_hash": "$2b$10$WLwhWkTQ3MgskAxukKJtau0zS3qsZvvrf8963Nm8HRYv1NH3rfFbW",
     "name": "Marco Conductor",
     "role": "conductor",
     "is_active": true,
