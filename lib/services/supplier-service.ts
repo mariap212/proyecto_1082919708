@@ -1,10 +1,18 @@
 import { requireSupabaseClient } from '../supabase';
 import type { Supplier } from '../types';
 
-export async function listSuppliers(includeInactive = false): Promise<Supplier[]> {
+export interface SupplierListFilters {
+  includeInactive?: boolean;
+  q?: string;
+}
+
+export async function listSuppliers(filters: SupplierListFilters | boolean = {}): Promise<Supplier[]> {
+  // Backward-compat: legacy callers pass a bool (includeInactive)
+  const opts: SupplierListFilters = typeof filters === 'boolean' ? { includeInactive: filters } : filters;
   const sb = requireSupabaseClient();
   let q = sb.from('suppliers').select('*').order('name');
-  if (!includeInactive) q = q.eq('is_active', true);
+  if (!opts.includeInactive) q = q.eq('is_active', true);
+  if (opts.q) q = q.or(`name.ilike.%${opts.q}%,contact.ilike.%${opts.q}%`);
   const { data, error } = await q;
   if (error) throw new Error(error.message);
   return (data ?? []) as Supplier[];

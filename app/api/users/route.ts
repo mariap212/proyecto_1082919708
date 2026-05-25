@@ -7,9 +7,13 @@ import type { Role } from '@/lib/types';
 export const dynamic = 'force-dynamic';
 
 // RN-08: solo admin
-export const GET = withRole(['admin'], async () => {
+export const GET = withRole(['admin'], async (req) => {
   try {
-    const users = await listUsers();
+    const u = new URL(req.url);
+    const users = await listUsers({
+      q: u.searchParams.get('q') ?? undefined,
+      role: (u.searchParams.get('role') as Role | null) ?? undefined,
+    });
     return ok(users.map(({ password_hash: _ph, ...u }) => u));
   } catch (e) {
     return fail(e);

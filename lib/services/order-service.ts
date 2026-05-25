@@ -18,7 +18,8 @@ export interface NewOrderInput {
 export async function createOrder(input: NewOrderInput): Promise<OrderWithItems> {
   if (!input.items.length) throw new Error('El pedido debe tener al menos un ítem');
   for (const it of input.items) {
-    if (it.quantity < 30) throw new Error(`Cantidad mínima por ítem: 30 unidades (1 cartón). Recibido: ${it.quantity}`);
+    if (it.quantity < 30)
+      throw new Error(`Cantidad mínima por ítem: 30 unidades (1 cartón). Recibido: ${it.quantity}`);
   }
 
   const sb = requireSupabaseClient();
@@ -29,7 +30,9 @@ export async function createOrder(input: NewOrderInput): Promise<OrderWithItems>
     .select('id, price_per_unit, is_active')
     .in('id', eggTypeIds);
   if (eErr) throw new Error(eErr.message);
-  const priceMap = new Map(eggTypes!.map((e) => [e.id, { price: Number(e.price_per_unit), active: e.is_active }]));
+  const priceMap = new Map(
+    eggTypes!.map((e) => [e.id, { price: Number(e.price_per_unit), active: e.is_active }])
+  );
 
   for (const it of input.items) {
     const info = priceMap.get(it.egg_type_id);
@@ -64,7 +67,6 @@ export async function createOrder(input: NewOrderInput): Promise<OrderWithItems>
   const itemRows = itemsWithPrice.map((it) => ({ ...it, order_id: order!.id }));
   const { data: items, error: iErr } = await sb.from('order_items').insert(itemRows).select('*');
   if (iErr) {
-    // rollback manual
     await sb.from('orders').delete().eq('id', order!.id);
     throw new Error(iErr.message);
   }
@@ -72,22 +74,49 @@ export async function createOrder(input: NewOrderInput): Promise<OrderWithItems>
   return { ...(order as Order), items: (items ?? []) as OrderItem[] };
 }
 
-export async function listOrders(filters?: {
+export interface OrderListFilters {
   status?: OrderStatus;
   client_id?: string;
   from?: string;
   to?: string;
+  q?: string;
   limit?: number;
-}): Promise<Order[]> {
+  offset?: number;
+}
+
+export async function listOrders(filters: OrderListFilters = {}): Promise<{
+  items: Order[];
+  total: number;
+  limit: number;
+  offset: number;
+}> {
   const sb = requireSupabaseClient();
-  let q = sb.from('orders').select('*').order('created_at', { ascending: false }).limit(filters?.limit ?? 100);
-  if (filters?.status) q = q.eq('status', filters.status);
-  if (filters?.client_id) q = q.eq('client_id', filters.client_id);
-  if (filters?.from) q = q.gte('created_at', filters.from);
-  if (filters?.to) q = q.lte('created_at', filters.to);
-  const { data, error } = await q;
+  const limit = Math.min(100, filters.limit ?? 25);
+  const offset = filters.offset ?? 0;
+
+  let clientIds: string[] | undefined;
+  if (filters.q) {
+    const { data: matches } = await sb
+      .from('clients')
+      .select('id')
+      .or(`name.ilike.%${filters.q}%,nit.ilike.%${filters.q}%`);
+    clientIds = (matches ?? []).map((c) => c.id);
+    if (clientIds.length === 0) {
+      return { items: [], total: 0, limit, offset };
+    }
+  }
+
+  let q = sb.from('orders').select('*', { count: 'exact' }).order('created_at', { ascending: false });
+  if (filters.status) q = q.eq('status', filters.status);
+  if (filters.client_id) q = q.eq('client_id', filters.client_id);
+  if (filters.from) q = q.gte('created_at', filters.from);
+  if (filters.to) q = q.lte('created_at', filters.to);
+  if (clientIds) q = q.in('client_id', clientIds);
+  q = q.range(offset, offset + limit - 1);
+
+  const { data, error, count } = await q;
   if (error) throw new Error(error.message);
-  return (data ?? []) as Order[];
+  return { items: (data ?? []) as Order[], total: count ?? 0, limit, offset };
 }
 
 export async function getOrderWithItems(id: string): Promise<OrderWithItems | null> {
@@ -101,7 +130,6 @@ export async function getOrderWithItems(id: string): Promise<OrderWithItems | nu
   return (data as OrderWithItems) ?? null;
 }
 
-/** RN-03: solo se pueden cancelar pedidos en estado `pendiente`. */
 export async function cancelOrder(id: string, actorId: string): Promise<Order> {
   const sb = requireSupabaseClient();
   const { data, error } = await sb
@@ -120,20 +148,6 @@ export async function cancelOrder(id: string, actorId: string): Promise<Order> {
   return data as Order;
 }
 
-/**
- * RN-11: APROBAR PEDIDO — operación compuesta indivisible.
- *
- *   1. Re-leer items del pedido
- *   2. Verificar stock COMPLETO (RN-01)
- *   3. Descontar stock + escribir movimientos
- *   4. Crear factura con número consecutivo
- *   5. Crear entrega en estado pendiente_asignacion
- *   6. Marcar pedido como 'aprobado'
- *
- * Si cualquier paso falla, retorna error con detalle. Para una atomicidad
- * real se requeriría una stored procedure (TODO futuro); por ahora el
- * pre-check de stock evita la mayoría de inconsistencias.
- */
 export async function processOrderApproval(input: {
   order_id: string;
   approved_by: string;
@@ -147,46 +161,43 @@ export async function processOrderApproval(input: {
   const order = await getOrderWithItems(input.order_id);
   if (!order) throw new Error('Pedido no encontrado');
   if (order.status !== 'pendiente') {
-    throw new Error(`Solo se pueden aprobar pedidos en estado pendiente (estado actual: ${order.status})`);
+    throw new Error(
+      `Solo se pueden aprobar pedidos en estado pendiente (estado actual: ${order.status})`
+    );
   }
   if (!order.items?.length) throw new Error('El pedido no tiene ítems');
 
-  // RN-01: verificar stock completo ANTES de cualquier escritura
   const missing = await verifyStockForItems(
     order.items.map((it) => ({ egg_type_id: it.egg_type_id, quantity: it.quantity }))
   );
   if (missing.length) {
-    const err = new Error('Stock insuficiente') as Error & { detail?: unknown; status?: number };
+    const err = new Error('Stock insuficiente') as Error & {
+      detail?: unknown;
+      status?: number;
+    };
     err.detail = { missing };
     err.status = 409;
     throw err;
   }
 
-  // 3. Descontar stock
   await deductStockForOrder(
     order.id,
     order.items.map((it) => ({ egg_type_id: it.egg_type_id, quantity: it.quantity })),
     input.approved_by
   );
 
-  // 4. Factura
   const invoice = await createInvoiceForOrder({
     order_id: order.id,
     total: Number(order.total),
   });
 
-  // 5. Entrega
   const { data: delivery, error: dErr } = await sb
     .from('deliveries')
-    .insert({
-      order_id: order.id,
-      status: 'pendiente_asignacion',
-    })
+    .insert({ order_id: order.id, status: 'pendiente_asignacion' })
     .select('id')
     .single();
   if (dErr) throw new Error(dErr.message);
 
-  // 6. Aprobar pedido
   const { data: approved, error: aErr } = await sb
     .from('orders')
     .update({

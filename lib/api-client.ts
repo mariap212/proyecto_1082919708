@@ -4,9 +4,25 @@
  * Cliente fetch para el browser. Asume que el server retorna
  * { data } en éxito y { error, detail? } en error.
  */
+export interface Paginated<T> {
+  items: T[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 export async function apiGet<T>(path: string): Promise<T> {
   const res = await fetch(path, { credentials: 'include' });
   return handle<T>(res);
+}
+
+export function buildQuery(params: Record<string, string | number | boolean | undefined | null>): string {
+  const parts: string[] = [];
+  for (const [k, v] of Object.entries(params)) {
+    if (v === undefined || v === null || v === '') continue;
+    parts.push(`${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`);
+  }
+  return parts.length ? `?${parts.join('&')}` : '';
 }
 
 export async function apiPost<T>(path: string, body?: unknown): Promise<T> {

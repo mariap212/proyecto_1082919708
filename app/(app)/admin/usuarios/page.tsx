@@ -1,15 +1,17 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { apiGet, apiPost, apiPatch, formatDate } from '@/lib/api-client';
+import { apiGet, apiPost, apiPatch, buildQuery, formatDate } from '@/lib/api-client';
 import { PageHeader } from '@/components/layout/PageHeader';
 import {
+  Eyebrow,
   Panel,
   SkeletonTable,
   StatusDot,
   Button,
   EmptyState,
 } from '@/components/ui/primitives';
+import { SearchBar } from '@/components/ui/filters';
 import { Modal } from '@/components/ui/Modal';
 import type { Role } from '@/lib/types';
 
@@ -31,15 +33,27 @@ const ROLE_COLOR: Record<Role, 'amber' | 'sky' | 'emerald' | 'violet'> = {
   conductor: 'violet',
 };
 
+const ROLE_FILTERS: Array<{ id: Role | ''; label: string }> = [
+  { id: '', label: 'Todos' },
+  { id: 'admin', label: 'Admin' },
+  { id: 'vendedor', label: 'Vendedor' },
+  { id: 'bodeguero', label: 'Bodeguero' },
+  { id: 'conductor', label: 'Conductor' },
+];
+
 export default function UsuariosPage() {
   const [users, setUsers] = useState<UserBrief[] | null>(null);
+  const [q, setQ] = useState('');
+  const [roleFilter, setRoleFilter] = useState<Role | ''>('');
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<UserBrief | null>(null);
   const [refresh, setRefresh] = useState(0);
 
   useEffect(() => {
-    apiGet<UserBrief[]>('/api/users').then(setUsers).catch(() => setUsers([]));
-  }, [refresh]);
+    setUsers(null);
+    const qs = buildQuery({ q: q || undefined, role: roleFilter || undefined });
+    apiGet<UserBrief[]>(`/api/users${qs}`).then(setUsers).catch(() => setUsers([]));
+  }, [refresh, q, roleFilter]);
 
   return (
     <>
@@ -49,6 +63,32 @@ export default function UsuariosPage() {
         subtitle="Gestión de cuentas y roles. Acceso restringido al rol administrador (RN-08)."
         actions={<Button onClick={() => setCreating(true)}>+ Nuevo usuario</Button>}
       />
+
+      <div className="mb-6 panel !p-4 flex flex-wrap items-center gap-4">
+        <SearchBar value={q} onChange={setQ} placeholder="Buscar por nombre o email…" />
+      </div>
+
+      <div className="mb-6 flex items-center gap-2 flex-wrap">
+        <Eyebrow>Rol</Eyebrow>
+        <div className="flex gap-1 flex-wrap">
+          {ROLE_FILTERS.map((f) => {
+            const active = roleFilter === f.id;
+            return (
+              <button
+                key={f.id || 'all'}
+                onClick={() => setRoleFilter(f.id)}
+                className={`px-3 py-1.5 rounded-full text-xs transition-all ${
+                  active
+                    ? 'bg-amber-400/15 text-amber-200 ring-1 ring-amber-400/30'
+                    : 'text-slate-500 hover:text-slate-300 hover:bg-white/[0.03]'
+                }`}
+              >
+                {f.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       {users === null ? (
         <SkeletonTable rows={4} cols={5} />

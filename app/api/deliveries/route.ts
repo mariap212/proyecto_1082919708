@@ -8,12 +8,17 @@ export const dynamic = 'force-dynamic';
 export const GET = withRole(['admin', 'vendedor', 'bodeguero', 'conductor'], async (req, session) => {
   try {
     const u = new URL(req.url);
-    // Si es conductor, fuerza filtrar por su propio driver_id (vista "mis entregas")
-    const driver_id = session.role === 'conductor' ? session.id : u.searchParams.get('driver_id') ?? undefined;
+    // Conductor solo ve sus propias entregas
+    const driver_id =
+      session.role === 'conductor' ? session.id : u.searchParams.get('driver_id') ?? undefined;
     return ok(
       await listDeliveries({
         status: (u.searchParams.get('status') as DeliveryStatus | null) ?? undefined,
         driver_id: driver_id ?? undefined,
+        from: u.searchParams.get('from') ?? undefined,
+        to: u.searchParams.get('to') ?? undefined,
+        limit: u.searchParams.get('limit') ? parseInt(u.searchParams.get('limit')!, 10) : undefined,
+        offset: u.searchParams.get('offset') ? parseInt(u.searchParams.get('offset')!, 10) : undefined,
       })
     );
   } catch (e) {

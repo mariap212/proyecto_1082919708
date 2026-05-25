@@ -16,6 +16,7 @@ export default function ProveedoresPage() {
         endpoint="/api/suppliers"
         title="proveedor"
         eyebrow="Catálogo · Proveedores"
+        searchPlaceholder="Buscar por nombre o contacto…"
         columns={[
           {
             key: 'name',

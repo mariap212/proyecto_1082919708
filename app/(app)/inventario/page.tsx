@@ -1,7 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { apiGet, apiPost, formatDateTime, formatCurrency } from '@/lib/api-client';
+import {
+  apiGet,
+  apiPost,
+  buildQuery,
+  formatDateTime,
+  formatCurrency,
+  type Paginated,
+} from '@/lib/api-client';
 import { PageHeader } from '@/components/layout/PageHeader';
 import {
   Eyebrow,
@@ -12,7 +19,8 @@ import {
   Button,
   EmptyState,
 } from '@/components/ui/primitives';
-import type { StockView, InventoryMovement, Supplier } from '@/lib/types';
+import { DateRangePicker, Pagination } from '@/components/ui/filters';
+import type { StockView, InventoryMovement, InventoryMovementType, Supplier } from '@/lib/types';
 
 type Tab = 'stock' | 'entrada' | 'movimientos' | 'ajuste';
 
@@ -384,19 +392,43 @@ function AjusteTab({ stock, onDone }: { stock: StockView[]; onDone: () => void }
   );
 }
 
+const MOVEMENT_TYPES: Array<{ id: InventoryMovementType | ''; label: string }> = [
+  { id: '', label: 'Todos' },
+  { id: 'entrada', label: 'Entradas' },
+  { id: 'salida', label: 'Salidas' },
+  { id: 'devolucion', label: 'Devoluciones' },
+  { id: 'ajuste', label: 'Ajustes' },
+];
+
+const MOV_PAGE_SIZE = 25;
+
 function MovimientosTab({ stock }: { stock: StockView[] }) {
-  const [movs, setMovs] = useState<InventoryMovement[] | null>(null);
+  const [data, setData] = useState<Paginated<InventoryMovement> | null>(null);
+  const [type, setType] = useState<InventoryMovementType | ''>('');
+  const [eggTypeId, setEggTypeId] = useState('');
+  const [range, setRange] = useState({ from: '', to: '' });
+  const [offset, setOffset] = useState(0);
+
   const codeMap = new Map(stock.map((s) => [s.egg_type_id, s.code]));
 
   useEffect(() => {
-    apiGet<InventoryMovement[]>('/api/inventory/movements?limit=200')
-      .then(setMovs)
-      .catch(() => setMovs([]));
-  }, []);
+    setData(null);
+    const qs = buildQuery({
+      type: type || undefined,
+      egg_type_id: eggTypeId || undefined,
+      from: range.from ? new Date(range.from).toISOString() : undefined,
+      to: range.to ? new Date(range.to + 'T23:59:59').toISOString() : undefined,
+      limit: MOV_PAGE_SIZE,
+      offset,
+    });
+    apiGet<Paginated<InventoryMovement>>(`/api/inventory/movements${qs}`)
+      .then(setData)
+      .catch(() => setData({ items: [], total: 0, limit: MOV_PAGE_SIZE, offset }));
+  }, [type, eggTypeId, range, offset]);
 
-  if (movs === null) return <SkeletonTable rows={6} cols={5} />;
-  if (movs.length === 0)
-    return <EmptyState glyph="—" title="Sin movimientos registrados" description="Las entradas, salidas, devoluciones y ajustes aparecerán aquí en orden cronológico." />;
+  useEffect(() => {
+    setOffset(0);
+  }, [type, eggTypeId, range]);
 
   const typeColor: Record<string, 'emerald' | 'rose' | 'sky' | 'amber'> = {
     entrada: 'emerald',
@@ -406,39 +438,105 @@ function MovimientosTab({ stock }: { stock: StockView[] }) {
   };
 
   return (
-    <Panel padded={false}>
-      <table className="data-table">
-        <thead>
-          <tr>
-            <th>Fecha</th>
-            <th>Tipo</th>
-            <th>Producto</th>
-            <th className="text-right">Cantidad</th>
-            <th>Notas</th>
-          </tr>
-        </thead>
-        <tbody>
-          {movs.map((m) => (
-            <tr key={m.id}>
-              <td className="text-xs text-slate-500 tabular-nums">{formatDateTime(m.created_at)}</td>
-              <td>
-                <StatusDot color={typeColor[m.type] ?? 'slate'} label={m.type} />
-              </td>
-              <td className="mono text-amber-300/80 text-sm">
-                {codeMap.get(m.egg_type_id) ?? m.egg_type_id.slice(0, 8)}
-              </td>
-              <td className="text-right">
-                <span className="num-hero text-base not-italic text-white tabular-nums">
-                  {m.type === 'salida' ? '−' : '+'}
-                  {m.quantity.toLocaleString('es-CO')}
-                </span>
-              </td>
-              <td className="text-xs text-slate-500 max-w-xs truncate">{m.notes ?? '—'}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </Panel>
+    <>
+      <div className="mb-6 panel !p-4 flex flex-wrap items-center gap-4">
+        <label className="flex items-center gap-2">
+          <Eyebrow>Producto</Eyebrow>
+          <select
+            value={eggTypeId}
+            onChange={(e) => setEggTypeId(e.target.value)}
+            className="select !py-1.5 !px-3 text-xs w-[180px]"
+          >
+            <option value="">Todos</option>
+            {stock.map((s) => (
+              <option key={s.egg_type_id} value={s.egg_type_id}>
+                {s.code} — {s.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <DateRangePicker from={range.from} to={range.to} onChange={setRange} />
+      </div>
+
+      <div className="mb-6 flex items-center gap-2 flex-wrap">
+        <Eyebrow>Tipo</Eyebrow>
+        <div className="flex gap-1 flex-wrap">
+          {MOVEMENT_TYPES.map((f) => {
+            const active = type === f.id;
+            return (
+              <button
+                key={f.id || 'all'}
+                onClick={() => setType(f.id)}
+                className={`px-3 py-1.5 rounded-full text-xs transition-all ${
+                  active
+                    ? 'bg-amber-400/15 text-amber-200 ring-1 ring-amber-400/30'
+                    : 'text-slate-500 hover:text-slate-300 hover:bg-white/[0.03]'
+                }`}
+              >
+                {f.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {data === null ? (
+        <SkeletonTable rows={6} cols={5} />
+      ) : data.items.length === 0 ? (
+        <EmptyState
+          glyph="—"
+          title={type || eggTypeId || range.from ? 'Sin coincidencias' : 'Sin movimientos registrados'}
+          description={
+            type || eggTypeId || range.from
+              ? 'Ajusta los filtros para ampliar la búsqueda.'
+              : 'Las entradas, salidas, devoluciones y ajustes aparecerán aquí en orden cronológico.'
+          }
+        />
+      ) : (
+        <>
+          <Panel padded={false}>
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Tipo</th>
+                  <th>Producto</th>
+                  <th className="text-right">Cantidad</th>
+                  <th>Notas</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.items.map((m) => (
+                  <tr key={m.id}>
+                    <td className="text-xs text-slate-500 tabular-nums">{formatDateTime(m.created_at)}</td>
+                    <td>
+                      <StatusDot color={typeColor[m.type] ?? 'slate'} label={m.type} />
+                    </td>
+                    <td className="mono text-amber-300/80 text-sm">
+                      {codeMap.get(m.egg_type_id) ?? m.egg_type_id.slice(0, 8)}
+                    </td>
+                    <td className="text-right">
+                      <span className="num-hero text-base not-italic text-white tabular-nums">
+                        {m.type === 'salida' ? '−' : '+'}
+                        {m.quantity.toLocaleString('es-CO')}
+                      </span>
+                    </td>
+                    <td className="text-xs text-slate-500 max-w-xs truncate">{m.notes ?? '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Panel>
+          <Pagination
+            total={data.total}
+            limit={data.limit}
+            offset={data.offset}
+            onChange={setOffset}
+            label="movimientos"
+          />
+        </>
+      )}
+    </>
   );
 }
 

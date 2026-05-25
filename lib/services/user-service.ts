@@ -2,12 +2,17 @@ import { requireSupabaseClient } from '../supabase';
 import { hashPassword } from '../auth';
 import type { Role, User } from '../types';
 
-export async function listUsers(): Promise<User[]> {
+export interface UserListFilters {
+  q?: string;
+  role?: Role;
+}
+
+export async function listUsers(filters: UserListFilters = {}): Promise<User[]> {
   const sb = requireSupabaseClient();
-  const { data, error } = await sb
-    .from('users')
-    .select('*')
-    .order('created_at', { ascending: false });
+  let q = sb.from('users').select('*').order('created_at', { ascending: false });
+  if (filters.role) q = q.eq('role', filters.role);
+  if (filters.q) q = q.or(`name.ilike.%${filters.q}%,email.ilike.%${filters.q}%`);
+  const { data, error } = await q;
   if (error) throw new Error(error.message);
   return (data ?? []) as User[];
 }

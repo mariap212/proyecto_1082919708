@@ -15,7 +15,9 @@ export const GET = withRole(['admin', 'vendedor', 'bodeguero'], async (req) => {
         client_id: u.searchParams.get('client_id') ?? undefined,
         from: u.searchParams.get('from') ?? undefined,
         to: u.searchParams.get('to') ?? undefined,
+        q: u.searchParams.get('q') ?? undefined,
         limit: u.searchParams.get('limit') ? parseInt(u.searchParams.get('limit')!, 10) : undefined,
+        offset: u.searchParams.get('offset') ? parseInt(u.searchParams.get('offset')!, 10) : undefined,
       })
     );
   } catch (e) {

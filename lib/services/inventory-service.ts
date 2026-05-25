@@ -151,26 +151,38 @@ export async function adjustStockManual(input: {
   return data as InventoryMovement;
 }
 
-export async function listMovements(filters?: {
+export interface MovementListFilters {
   egg_type_id?: string;
   type?: InventoryMovementType;
   from?: string;
   to?: string;
   limit?: number;
-}): Promise<InventoryMovement[]> {
+  offset?: number;
+}
+
+export async function listMovements(filters: MovementListFilters = {}): Promise<{
+  items: InventoryMovement[];
+  total: number;
+  limit: number;
+  offset: number;
+}> {
   const sb = requireSupabaseClient();
+  const limit = Math.min(200, filters.limit ?? 25);
+  const offset = filters.offset ?? 0;
+
   let q = sb
     .from('inventory_movements')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .limit(filters?.limit ?? 100);
-  if (filters?.egg_type_id) q = q.eq('egg_type_id', filters.egg_type_id);
-  if (filters?.type) q = q.eq('type', filters.type);
-  if (filters?.from) q = q.gte('created_at', filters.from);
-  if (filters?.to) q = q.lte('created_at', filters.to);
-  const { data, error } = await q;
+    .select('*', { count: 'exact' })
+    .order('created_at', { ascending: false });
+  if (filters.egg_type_id) q = q.eq('egg_type_id', filters.egg_type_id);
+  if (filters.type) q = q.eq('type', filters.type);
+  if (filters.from) q = q.gte('created_at', filters.from);
+  if (filters.to) q = q.lte('created_at', filters.to);
+  q = q.range(offset, offset + limit - 1);
+
+  const { data, error, count } = await q;
   if (error) throw new Error(error.message);
-  return (data ?? []) as InventoryMovement[];
+  return { items: (data ?? []) as InventoryMovement[], total: count ?? 0, limit, offset };
 }
 
 /**

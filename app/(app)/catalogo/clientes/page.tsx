@@ -16,6 +16,7 @@ export default function ClientesPage() {
         endpoint="/api/clients"
         title="cliente"
         eyebrow="Catálogo · Clientes"
+        searchPlaceholder="Buscar por nombre o NIT…"
         columns={[
           {
             key: 'name',

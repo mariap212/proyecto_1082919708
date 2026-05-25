@@ -1,10 +1,6 @@
 import { requireSupabaseClient } from '../supabase';
 import type { Invoice } from '../types';
 
-/**
- * RN-10: número de factura consecutivo.
- * Ejecutado DENTRO de processOrderApproval para mantener atomicidad.
- */
 export async function getNextInvoiceNumber(): Promise<number> {
   const sb = requireSupabaseClient();
   const { data, error } = await sb
@@ -37,24 +33,43 @@ export async function createInvoiceForOrder(input: {
   return data as Invoice;
 }
 
-export async function listInvoices(filters?: {
+export interface InvoiceListFilters {
   from?: string;
   to?: string;
   include_voided?: boolean;
+  q?: string; // searches invoice_number
   limit?: number;
-}): Promise<Invoice[]> {
+  offset?: number;
+}
+
+export async function listInvoices(filters: InvoiceListFilters = {}): Promise<{
+  items: Invoice[];
+  total: number;
+  limit: number;
+  offset: number;
+}> {
   const sb = requireSupabaseClient();
+  const limit = Math.min(100, filters.limit ?? 25);
+  const offset = filters.offset ?? 0;
+
   let q = sb
     .from('invoices')
-    .select('*')
-    .order('invoice_number', { ascending: false })
-    .limit(filters?.limit ?? 200);
-  if (!filters?.include_voided) q = q.eq('is_voided', false);
-  if (filters?.from) q = q.gte('created_at', filters.from);
-  if (filters?.to) q = q.lte('created_at', filters.to);
-  const { data, error } = await q;
+    .select('*', { count: 'exact' })
+    .order('invoice_number', { ascending: false });
+
+  if (!filters.include_voided) q = q.eq('is_voided', false);
+  if (filters.from) q = q.gte('created_at', filters.from);
+  if (filters.to) q = q.lte('created_at', filters.to);
+  if (filters.q) {
+    const num = parseInt(filters.q, 10);
+    if (!Number.isNaN(num)) q = q.eq('invoice_number', num);
+    else q = q.eq('invoice_number', -1); // no match
+  }
+  q = q.range(offset, offset + limit - 1);
+
+  const { data, error, count } = await q;
   if (error) throw new Error(error.message);
-  return (data ?? []) as Invoice[];
+  return { items: (data ?? []) as Invoice[], total: count ?? 0, limit, offset };
 }
 
 export async function getInvoice(id: string): Promise<Invoice | null> {
@@ -64,7 +79,6 @@ export async function getInvoice(id: string): Promise<Invoice | null> {
   return (data as Invoice) ?? null;
 }
 
-/** RN-07: anular factura (no se elimina). */
 export async function voidInvoice(id: string, reason: string, voidedBy: string): Promise<Invoice> {
   if (!reason || reason.trim().length < 5) {
     throw new Error('El motivo de anulación debe tener al menos 5 caracteres');

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { apiGet, apiPost, formatDateTime } from '@/lib/api-client';
+import { apiGet, apiPost, buildQuery, formatDateTime, type Paginated } from '@/lib/api-client';
 import { PageHeader } from '@/components/layout/PageHeader';
 import {
   Eyebrow,
@@ -10,6 +10,7 @@ import {
   Button,
   EmptyState,
 } from '@/components/ui/primitives';
+import { DateRangePicker, Pagination } from '@/components/ui/filters';
 import type { Delivery, DeliveryStatus, Role } from '@/lib/types';
 
 interface UserBrief {
@@ -43,16 +44,44 @@ const STATUS_LABEL: Record<DeliveryStatus, string> = {
 
 const STAGES: DeliveryStatus[] = ['pendiente_asignacion', 'asignada', 'en_camino', 'entregada'];
 
+const STATUS_FILTERS: Array<{ id: DeliveryStatus | ''; label: string }> = [
+  { id: '', label: 'Todas' },
+  { id: 'pendiente_asignacion', label: 'Por asignar' },
+  { id: 'asignada', label: 'Asignadas' },
+  { id: 'en_camino', label: 'En camino' },
+  { id: 'entregada', label: 'Entregadas' },
+  { id: 'fallida', label: 'Fallidas' },
+];
+
+const PAGE_SIZE = 15;
+
 export default function EntregasPage() {
-  const [deliveries, setDeliveries] = useState<Delivery[] | null>(null);
+  const [data, setData] = useState<Paginated<Delivery> | null>(null);
   const [drivers, setDrivers] = useState<UserBrief[]>([]);
   const [me, setMe] = useState<Me | null>(null);
+  const [status, setStatus] = useState<DeliveryStatus | ''>('');
+  const [range, setRange] = useState({ from: '', to: '' });
+  const [offset, setOffset] = useState(0);
   const [refresh, setRefresh] = useState(0);
 
   useEffect(() => {
-    apiGet<Delivery[]>('/api/deliveries').then(setDeliveries).catch(() => setDeliveries([]));
+    setData(null);
+    const qs = buildQuery({
+      status: status || undefined,
+      from: range.from ? new Date(range.from).toISOString() : undefined,
+      to: range.to ? new Date(range.to + 'T23:59:59').toISOString() : undefined,
+      limit: PAGE_SIZE,
+      offset,
+    });
+    apiGet<Paginated<Delivery>>(`/api/deliveries${qs}`)
+      .then(setData)
+      .catch(() => setData({ items: [], total: 0, limit: PAGE_SIZE, offset }));
     apiGet<Me>('/api/auth/me').then(setMe).catch(() => undefined);
-  }, [refresh]);
+  }, [status, range, offset, refresh]);
+
+  useEffect(() => {
+    setOffset(0);
+  }, [status, range]);
 
   useEffect(() => {
     if (me?.role === 'admin') {
@@ -101,29 +130,69 @@ export default function EntregasPage() {
         }
       />
 
-      {deliveries === null ? (
+      {/* Filters */}
+      <div className="mb-6 panel !p-4 flex flex-wrap items-center gap-4">
+        <DateRangePicker from={range.from} to={range.to} onChange={setRange} />
+      </div>
+
+      <div className="mb-6 flex items-center gap-2 flex-wrap">
+        <Eyebrow>Estado</Eyebrow>
+        <div className="flex gap-1 flex-wrap">
+          {STATUS_FILTERS.map((f) => {
+            const active = status === f.id;
+            return (
+              <button
+                key={f.id || 'all'}
+                onClick={() => setStatus(f.id)}
+                className={`px-3 py-1.5 rounded-full text-xs transition-all ${
+                  active
+                    ? 'bg-amber-400/15 text-amber-200 ring-1 ring-amber-400/30'
+                    : 'text-slate-500 hover:text-slate-300 hover:bg-white/[0.03]'
+                }`}
+              >
+                {f.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {data === null ? (
         <SkeletonTable rows={5} cols={4} />
-      ) : deliveries.length === 0 ? (
+      ) : data.items.length === 0 ? (
         <EmptyState
           glyph="—"
-          title="Sin entregas registradas"
-          description="Las entregas aparecen automáticamente al aprobar un pedido."
+          title={status || range.from ? 'Sin coincidencias' : 'Sin entregas registradas'}
+          description={
+            status || range.from
+              ? 'Ajusta los filtros para ampliar la búsqueda.'
+              : 'Las entregas aparecen automáticamente al aprobar un pedido.'
+          }
         />
       ) : (
-        <div className="space-y-4">
-          {deliveries.map((d, i) => (
-            <DeliveryCard
-              key={d.id}
-              delivery={d}
-              drivers={drivers}
-              isAdmin={Boolean(isAdmin)}
-              isConductor={Boolean(isConductor)}
-              onAssign={(driverId) => assign(d.id, driverId)}
-              onChangeStatus={(status) => changeStatus(d.id, status)}
-              style={{ animationDelay: `${i * 40}ms` }}
-            />
-          ))}
-        </div>
+        <>
+          <div className="space-y-4">
+            {data.items.map((d, i) => (
+              <DeliveryCard
+                key={d.id}
+                delivery={d}
+                drivers={drivers}
+                isAdmin={Boolean(isAdmin)}
+                isConductor={Boolean(isConductor)}
+                onAssign={(driverId) => assign(d.id, driverId)}
+                onChangeStatus={(s) => changeStatus(d.id, s)}
+                style={{ animationDelay: `${i * 40}ms` }}
+              />
+            ))}
+          </div>
+          <Pagination
+            total={data.total}
+            limit={data.limit}
+            offset={data.offset}
+            onChange={setOffset}
+            label="entregas"
+          />
+        </>
       )}
     </>
   );

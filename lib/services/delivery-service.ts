@@ -2,18 +2,38 @@ import { requireSupabaseClient } from '../supabase';
 import type { Delivery, DeliveryStatus } from '../types';
 import { returnStockFromFailedDelivery } from './inventory-service';
 
-export async function listDeliveries(filters?: {
+export interface DeliveryListFilters {
   status?: DeliveryStatus;
   driver_id?: string;
+  from?: string;
+  to?: string;
   limit?: number;
-}): Promise<Delivery[]> {
+  offset?: number;
+}
+
+export async function listDeliveries(filters: DeliveryListFilters = {}): Promise<{
+  items: Delivery[];
+  total: number;
+  limit: number;
+  offset: number;
+}> {
   const sb = requireSupabaseClient();
-  let q = sb.from('deliveries').select('*').order('created_at', { ascending: false }).limit(filters?.limit ?? 100);
-  if (filters?.status) q = q.eq('status', filters.status);
-  if (filters?.driver_id) q = q.eq('driver_id', filters.driver_id);
-  const { data, error } = await q;
+  const limit = Math.min(100, filters.limit ?? 25);
+  const offset = filters.offset ?? 0;
+
+  let q = sb
+    .from('deliveries')
+    .select('*', { count: 'exact' })
+    .order('created_at', { ascending: false });
+  if (filters.status) q = q.eq('status', filters.status);
+  if (filters.driver_id) q = q.eq('driver_id', filters.driver_id);
+  if (filters.from) q = q.gte('created_at', filters.from);
+  if (filters.to) q = q.lte('created_at', filters.to);
+  q = q.range(offset, offset + limit - 1);
+
+  const { data, error, count } = await q;
   if (error) throw new Error(error.message);
-  return (data ?? []) as Delivery[];
+  return { items: (data ?? []) as Delivery[], total: count ?? 0, limit, offset };
 }
 
 export async function getDelivery(id: string): Promise<Delivery | null> {

@@ -7,8 +7,13 @@ export const dynamic = 'force-dynamic';
 
 export const GET = withRole(['admin', 'vendedor', 'bodeguero'], async (req) => {
   try {
-    const includeInactive = new URL(req.url).searchParams.get('all') === 'true';
-    return ok(await listSuppliers(includeInactive));
+    const u = new URL(req.url);
+    return ok(
+      await listSuppliers({
+        includeInactive: u.searchParams.get('all') === 'true',
+        q: u.searchParams.get('q') ?? undefined,
+      })
+    );
   } catch (e) {
     return fail(e);
   }

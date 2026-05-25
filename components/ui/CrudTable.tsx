@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { apiGet, apiPost, apiPatch, apiDelete } from '@/lib/api-client';
+import { apiGet, apiPost, apiPatch, apiDelete, buildQuery } from '@/lib/api-client';
 import {
   Panel,
   SkeletonTable,
@@ -10,6 +10,7 @@ import {
   EmptyState,
 } from './primitives';
 import { Modal } from './Modal';
+import { SearchBar } from './filters';
 
 export interface FieldDef {
   key: string;
@@ -32,6 +33,7 @@ export function CrudTable<T extends RowBase>({
   title,
   eyebrow,
   emptyHint,
+  searchPlaceholder = 'Buscar…',
 }: {
   endpoint: string;
   columns: Array<{ key: keyof T & string; label: string; render?: (row: T) => React.ReactNode }>;
@@ -39,21 +41,25 @@ export function CrudTable<T extends RowBase>({
   title: string;
   eyebrow?: string;
   emptyHint?: string;
+  searchPlaceholder?: string;
 }) {
   const [rows, setRows] = useState<T[] | null>(null);
+  const [q, setQ] = useState('');
   const [editing, setEditing] = useState<T | null>(null);
   const [creating, setCreating] = useState(false);
   const [refresh, setRefresh] = useState(0);
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
-    apiGet<T[]>(`${endpoint}?all=true`)
+    setRows(null);
+    const qs = buildQuery({ all: true, q: q || undefined });
+    apiGet<T[]>(`${endpoint}${qs}`)
       .then(setRows)
       .catch((e) => {
         setErr((e as Error).message);
         setRows([]);
       });
-  }, [endpoint, refresh]);
+  }, [endpoint, refresh, q]);
 
   async function softDelete(id: string) {
     if (!confirm('¿Desactivar este registro? (se preserva el historial, no se elimina físicamente)')) return;
@@ -65,15 +71,12 @@ export function CrudTable<T extends RowBase>({
     }
   }
 
-  const handleCreate = (
-    <div className="mb-6 flex items-center justify-end">
-      <Button onClick={() => setCreating(true)}>+ Nuevo {title}</Button>
-    </div>
-  );
-
   return (
     <>
-      {handleCreate}
+      <div className="mb-6 panel !p-4 flex flex-wrap items-center gap-4">
+        <SearchBar value={q} onChange={setQ} placeholder={searchPlaceholder} />
+        <Button onClick={() => setCreating(true)} className="ml-auto">+ Nuevo {title}</Button>
+      </div>
       {err && <p className="text-rose-400 text-sm mb-4">{err}</p>}
 
       {rows === null ? (

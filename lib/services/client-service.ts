@@ -1,10 +1,17 @@
 import { requireSupabaseClient } from '../supabase';
 import type { Client } from '../types';
 
-export async function listClients(includeInactive = false): Promise<Client[]> {
+export interface ClientListFilters {
+  includeInactive?: boolean;
+  q?: string;
+}
+
+export async function listClients(filters: ClientListFilters | boolean = {}): Promise<Client[]> {
+  const opts: ClientListFilters = typeof filters === 'boolean' ? { includeInactive: filters } : filters;
   const sb = requireSupabaseClient();
   let q = sb.from('clients').select('*').order('name');
-  if (!includeInactive) q = q.eq('is_active', true);
+  if (!opts.includeInactive) q = q.eq('is_active', true);
+  if (opts.q) q = q.or(`name.ilike.%${opts.q}%,nit.ilike.%${opts.q}%`);
   const { data, error } = await q;
   if (error) throw new Error(error.message);
   return (data ?? []) as Client[];
